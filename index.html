@@ -1,0 +1,1248 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1f3a5f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>go asia 做账记录</title>
+<style>  :root {
+    --kopf:#1f3a5f; --accent:#1f3a5f; --hell:#8EC31F; --rot:#E60013;
+    --bg:#ffffff; --panel:#f3f5f8; --line:#dde3ea; --text:#142030; --dim:#66717f;
+    --ok:#006935; --warn:#8f5700; --bad:#E60013;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--text);
+    font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    overscroll-behavior:none; }
+  body { display:flex; flex-direction:column;
+    padding-top:env(safe-area-inset-top,0); padding-bottom:env(safe-area-inset-bottom,0); }
+
+  header { display:flex; align-items:center; gap:8px; padding:7px 10px;
+    background:var(--kopf); flex:0 0 auto; }
+  #logo { height:30px; width:auto; flex:0 0 auto; display:block; }
+  header .sp { flex:1; }
+
+  .tag { font-size:12px; padding:3px 8px; border-radius:99px; background:rgba(255,255,255,.18);
+    color:#fff; max-width:46vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tag:empty { display:none; }
+  #lang { font-size:12px; font-weight:700; color:#fff; background:rgba(255,255,255,.18);
+    border:0; border-radius:99px; padding:5px 10px; }
+  #gear { border:0; background:transparent; color:#fff; font-size:18px; padding:2px 4px; }
+
+  #flash { flex:0 0 auto; padding:14px 10px; text-align:center; background:var(--panel);
+    border-bottom:1px solid var(--line); color:var(--text); }
+  #flash .a { font-size:26px; font-weight:800; line-height:1.15; word-break:break-word; }
+  #flash .b { font-size:14px; opacity:.9; margin-top:2px; }
+  #flash .b:empty { display:none; }
+  #flash.ok { background:var(--ok); color:#fff; }
+  #flash.warn { background:var(--warn); color:#fff; }
+  #flash.bad { background:var(--bad); color:#fff; }
+
+  nav { display:flex; flex:0 0 auto; background:var(--bg); border-bottom:1px solid var(--line); }
+  nav button { flex:1; padding:11px 2px; border:0; background:transparent; color:var(--dim);
+    font-size:15px; font-weight:600; border-bottom:3px solid transparent; }
+  nav button.sel { color:var(--text); border-bottom-color:var(--accent); }
+
+  main { flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:10px; }
+  .hide { display:none !important; }
+
+  .cam { position:relative; background:#000; border-radius:10px; overflow:hidden; margin-bottom:8px; }
+  .cam video { width:100%; max-height:34vh; display:block; object-fit:cover; }
+  .cam .fr { position:absolute; inset:20% 6%; border:2px solid rgba(255,255,255,.9); border-radius:6px;
+    box-shadow:0 0 0 2000px rgba(0,0,0,.3); pointer-events:none; }
+  .cam .fr::after { content:""; position:absolute; left:0; right:0; top:50%; height:2px; background:#e53e3e; }
+
+  .two { display:flex; gap:8px; }
+  button.b { flex:1; padding:14px 8px; font-size:16px; font-weight:700; border:0; border-radius:10px;
+    background:var(--accent); color:#fff; }
+  button.b.g { background:var(--panel); color:var(--text); border:1px solid var(--line); }
+  button.b.w { width:100%; }
+
+  button.b.rot { background:var(--rot); }
+
+  button.b.da { background:var(--ok); color:#fff; border-color:var(--ok); }
+  button.b[disabled] { opacity:.45; }
+  input { width:100%; padding:13px; font-size:17px; border-radius:10px; border:1px solid var(--line);
+    background:var(--bg); color:var(--text); margin-top:8px; }
+  #cfgCode { font-size:30px; text-align:center; letter-spacing:8px; font-weight:800;
+    text-transform:uppercase; font-family:ui-monospace,Menlo,monospace; }
+
+  .big { font-size:34px; font-weight:800; text-align:center; padding:14px 8px 10px;
+    background:var(--panel); border:2px solid var(--accent); border-radius:12px;
+    margin:2px 0 6px; color:var(--accent); line-height:1.1; word-break:break-word; }
+  .big .wt { display:block; font-size:16px; font-weight:700; margin-top:5px; }
+  .big.fertig { border-color:var(--ok); color:var(--ok); }
+  .zuletzt { display:flex; align-items:center; justify-content:center; gap:8px; min-height:30px;
+    font-size:14px; color:var(--dim); }
+  .zuletzt button { border:1px solid var(--line); background:var(--panel); color:var(--text);
+    border-radius:8px; font-size:17px; padding:1px 12px; }
+
+  .foto { display:flex; align-items:center; gap:10px; margin:8px 0; }
+  .foto img { height:52px; width:52px; object-fit:cover; border-radius:8px; border:2px solid var(--ok);
+    flex:0 0 auto; }
+  .platz { margin:8px 0 0; }
+
+  .row { display:flex; align-items:center; gap:8px; padding:9px 10px; background:var(--panel);
+    border:1px solid var(--line); border-radius:9px; margin-top:6px; font-size:15px; }
+  .row .g { flex:1; min-width:0; }
+  .row .s { color:var(--dim); font-size:13px; }
+  .row .x { color:var(--dim); font-size:22px; padding:0 6px; }
+  .row .eur { font-weight:800; white-space:nowrap; }
+
+  .nr { font-family:ui-monospace,Menlo,monospace; font-size:12px; color:var(--dim); word-break:break-all; }
+  .nr b { color:var(--text); font-size:16px; }
+
+  .row input.betrag { width:7.2em; flex:0 0 auto; margin:0; padding:9px 10px; text-align:right;
+    font-size:18px; font-weight:700; }
+  .row input.betrag.falsch { border-color:var(--bad); color:var(--bad); }
+  .row.an { border-color:var(--ok); background:#e7f2eb; }
+  .row .haken { width:22px; text-align:center; font-size:19px; font-weight:800; color:var(--line); }
+  .row.an .haken { color:var(--ok); }
+  .summe { text-align:right; font-weight:800; font-size:17px; padding:8px 4px 2px; }
+  .summe:empty { display:none; }
+  .leer { text-align:center; color:var(--dim); padding:14px 0; }
+  .hint { font-size:12px; color:var(--dim); margin-top:4px; min-height:16px; }
+  .lbl { font-size:12px; color:var(--dim); margin-top:10px; }
+
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .spin { display:inline-block; width:19px; height:19px; border-radius:50%;
+    border:3px solid rgba(255,255,255,.35); border-top-color:#fff;
+    animation:spin .8s linear infinite; vertical-align:-4px; }
+  button.b.g .spin { border-color:rgba(128,128,128,.35); border-top-color:currentColor; }
+  .spin.gross { width:48px; height:48px; border-width:5px; border-color:rgba(31,58,95,.2);
+    border-top-color:var(--accent); }
+
+  #dlg { position:fixed; inset:0; z-index:30; background:rgba(10,20,35,.55); display:flex;
+    align-items:center; justify-content:center; padding:14px; }
+  #dlg .karte { background:var(--bg); border-radius:14px; padding:14px; width:100%; max-width:440px;
+    max-height:92vh; overflow-y:auto; }
+  #dlg .dt { text-align:center; font-size:18px; font-weight:800; margin-bottom:6px; }
+  #dlg .dt:empty { display:none; }
+  #busy { position:fixed; inset:0; z-index:40; background:rgba(255,255,255,.6); display:flex;
+    align-items:center; justify-content:center; }
+</style>
+</head>
+<body>
+
+<header>
+  <img id="logo" src="logo.png" alt="go asia">
+  <span class="sp"></span>
+  <span id="who" class="tag"></span>
+  <button id="lang">DE</button>
+  <button id="gear">&#9881;</button>
+</header>
+
+<section id="setup" class="hide" style="padding:10px">
+  <div id="pairBox">
+    <div class="lbl" data-t="code">Code</div>
+    <input id="cfgCode" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6">
+    <div style="height:10px"></div>
+    <button id="cfgPair" class="b w" data-t="save">OK</button>
+  </div>
+  <div id="doneBox" class="hide">
+    <div class="row"><span class="g" id="meName"></span><span class="s" id="meRole"></span></div>
+    <button id="cfgUnpair" class="b g w" data-t="unpair">Abmelden</button>
+  </div>
+  <div id="cfgMsg" class="hint"></div>
+</section>
+
+<div id="app" class="hide" style="display:flex;flex-direction:column;flex:1;min-height:0">
+  <div id="flash"><div class="a"></div><div class="b"></div></div>
+
+  <nav id="nav">
+    <button data-mode="abr" class="sel" data-t="tabAbr">Abrechnung</button>
+    <button data-mode="ueb" data-t="tabUeb">Übergabe</button>
+  </nav>
+
+  <main>
+    <div id="nurFiliale" class="leer hide" data-t="nurFiliale">Nur für Filialen</div>
+
+    <section id="mAbr">
+      <div id="tagKarte" class="big">&ndash;</div>
+      <div id="startBox" class="hide">
+        <div class="lbl" data-t="startdatum">Startdatum</div>
+        <input id="startDatum" type="date">
+      </div>
+      <div class="zuletzt"><span id="zuletztText"></span><button id="btnLeerZurueck" class="hide" type="button">&#8630;</button></div>
+      <div id="abrArbeit" class="foto">
+        <button id="btnFotoAbr" class="b g" data-t="fotoAbr">Foto Abrechnung</button>
+        <img id="imgAbr" class="hide" alt="">
+      </div>
+      <div id="platzAbr" class="platz"></div>
+      <div id="abrListe"></div>
+      <div id="abrSumme" class="summe"></div>
+      <div id="abrKnoepfe" class="two" style="margin-top:10px">
+        <button id="btnLeer" class="b g" data-t="leerTag">Kein Geld</button>
+        <button id="btnBuchen" class="b" data-t="buchen">Buchen</button>
+      </div>
+    </section>
+
+    <section id="mUeb" class="hide">
+      <div id="platzUeb" class="platz"></div>
+      <div id="tresorListe"></div>
+      <div id="uebSumme" class="summe"></div>
+      <div id="uebArbeit">
+        <div class="foto">
+          <button id="btnFotoUeb" class="b g" data-t="fotoUeb">Foto Beleg</button>
+          <img id="imgUeb" class="hide" alt="">
+        </div>
+        <button id="btnUebBuchen" class="b w" data-t="uebBuchen">Übergabe buchen</button>
+      </div>
+    </section>
+
+    <div id="scanBox">
+      <div class="cam hide" id="cam"><video id="video" playsinline muted autoplay></video><div class="fr"></div></div>
+      <div class="two">
+        <button id="btnCam" class="b" data-t="cam">Scannen</button>
+        <button id="btnShot" class="b g" data-t="photo">Foto-Code</button>
+      </div>
+      <input id="photo" type="file" accept="image/*" capture="environment" class="hide">
+      <form id="manForm" autocomplete="off"><input id="manual" type="text" inputmode="numeric"></form>
+      <div id="manHint" class="hint"></div>
+    </div>
+
+    <div style="height:14px"></div>
+    <button id="btnLaden" class="b g w" data-t="reload">Laden</button>
+  </main>
+</div>
+
+<input id="fotoAbr" type="file" accept="image/*" capture="environment" class="hide">
+<input id="fotoUeb" type="file" accept="image/*" capture="environment" class="hide">
+
+<div id="dlg" class="hide">
+  <div class="karte">
+    <div id="dlgTitel" class="dt"></div>
+    <div id="dlgGross" class="big"></div>
+    <div id="dlgListe"></div>
+    <div id="dlgSumme" class="summe"></div>
+    <div class="two" style="margin-top:12px">
+      <button id="dlgNein" class="b g" data-t="cancel">Abbrechen</button>
+      <button id="dlgJa" class="b">OK</button>
+    </div>
+  </div>
+</div>
+<div id="busy" class="hide"><span class="spin gross"></span></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js">
+</script>
+<script>(function () {
+'use strict';
+
+var TXT = {
+  de: { title:'go asia Abrechnung', tabAbr:'Abrechnung', tabUeb:'Übergabe',
+        cam:'Scannen', camOff:'Stopp', photo:'Foto-Code', reload:'Laden',
+        save:'OK', code:'Code', unpair:'Abmelden', cancel:'Abbrechen',
+        ready:'Bereit', reading:'…', noRead:'Nichts erkannt', noCam:'Scannen nicht möglich',
+        check:'Prüfziffer falsch', offline:'Kein Netz', needPair:'Anmelden',
+        pairFail:'Kopplung fehlgeschlagen', nurFiliale:'Nur für Filialen', forbidden:'Keine Berechtigung',
+        startdatum:'Startdatum', fertig:'Erledigt', zuletzt:'Zuletzt', stk:'Beutel',
+        fotoAbr:'Foto Abrechnung', fotoUeb:'Foto Beleg', fotoFehler:'Foto nicht lesbar',
+        leerTag:'Kein Geld', buchen:'Buchen', bestaetigen:'Bestätigen', zurueck:'Zurücknehmen',
+        abrZurueck:'Abrechnung zurücknehmen', uebZurueck:'Übergabe zurücknehmen',
+        leerZurueck:'Kein Geld zurücknehmen', uebBuchen:'Übergabe buchen',
+        gescannt:'Gescannt', tresorLeer:'Tresor leer', abgegeben:'Übergeben',
+        neu:'Neuer Beutel', ungueltig:'Barcode ungültig', doppelt:'Schon in der Liste',
+        maxBeutel:'Höchstens 10 Beutel', schonGescannt:'Schon gescannt', erledigtHeute:'Heute erledigt',
+        stTresor:'Im Tresor', stAbgeholt:'Übergeben', stGezaehlt:'Von der Bank gezählt',
+        stFremd:'Kein Abrechnungsbeutel', fremd:'Kein Abrechnungsbeutel', andereFiliale:'Andere Filiale',
+        abrDone:'Gebucht', leerDone:'Kein Geld gebucht', uebDone:'Übergabe gebucht', zurueckDone:'Zurückgenommen',
+        errDatum:'Datum geändert', errStart:'Datum ungültig', errExists:'Schon erfasst', errBetrag:'Betrag ungültig',
+        errFoto:'Foto fehlt', errLeer:'Kein Beutel', errTresor:'Nicht im Tresor',
+        errAbgeholt:'Schon übergeben', notFound:'Nicht gefunden' },
+  zh: { title:'go asia 做账记录', tabAbr:'做账', tabUeb:'交袋',
+        cam:'扫描', camOff:'停止', photo:'拍照取码', reload:'刷新',
+        save:'确定', code:'配对码', unpair:'解除', cancel:'取消',
+        ready:'就绪', reading:'…', noRead:'未识别', noCam:'无法扫描',
+        check:'校验位错误', offline:'无网络', needPair:'请先配对',
+        pairFail:'配对失败', nurFiliale:'仅限门店', forbidden:'无权限',
+        startdatum:'开始日期', fertig:'已完成', zuletzt:'上次', stk:'袋',
+        fotoAbr:'账单照片', fotoUeb:'收据照片', fotoFehler:'照片无法读取',
+        leerTag:'无钱袋', buchen:'提交', bestaetigen:'确认', zurueck:'撤回',
+        abrZurueck:'撤回做账', uebZurueck:'撤回交袋',
+        leerZurueck:'撤回无钱袋', uebBuchen:'确认交袋',
+        gescannt:'已扫', tresorLeer:'保险柜里没有钱袋', abgegeben:'交出',
+        neu:'新钱袋', ungueltig:'条码无效', doppelt:'已在列表',
+        maxBeutel:'最多 10 袋', schonGescannt:'已扫过', erledigtHeute:'今天已完成',
+        stTresor:'在保险柜', stAbgeholt:'已交出', stGezaehlt:'银行已清点',
+        stFremd:'非做账钱袋', fremd:'非做账钱袋', andereFiliale:'非本店钱袋',
+        abrDone:'已提交', leerDone:'已记无钱袋', uebDone:'已交袋', zurueckDone:'已撤回',
+        errDatum:'日期已变', errStart:'日期无效', errExists:'条码已登记', errBetrag:'金额无效',
+        errFoto:'缺少照片', errLeer:'没有钱袋', errTresor:'不在保险柜',
+        errAbgeholt:'已有袋交出', notFound:'未找到' }
+};
+var lang = 'de';
+function t(k) { return (TXT[lang] && TXT[lang][k]) || TXT.de[k] || k; }
+
+var K = { cfg:'tresor.cfg', lang:'tresor.lang' };
+function ls(k, v) {
+  try {
+    if (v === undefined) { var s = localStorage.getItem(k); return s ? JSON.parse(s) : null; }
+    localStorage.setItem(k, JSON.stringify(v));
+  } catch (e) { return null; }
+}
+var cfg = ls(K.cfg) || { api:'', tok:'', who:'', rolle:'', filiale:null };
+
+var API_HASH = '61a04c817f9f01027601baf344e1ebebba2f55e8a1141deba261dcccb8b69a19';
+
+var API_RE = /^https:\/\/script\.google\.com\/(?:macros\/|a\/[A-Za-z0-9.-]+\/macros\/|a\/macros\/[A-Za-z0-9.-]+\/)s\/([A-Za-z0-9_-]+)\/exec$/;
+
+function sha256ascii(text) {
+  var K = ('428a2f98 71374491 b5c0fbcf e9b5dba5 3956c25b 59f111f1 923f82a4 ab1c5ed5 ' +
+           'd807aa98 12835b01 243185be 550c7dc3 72be5d74 80deb1fe 9bdc06a7 c19bf174 ' +
+           'e49b69c1 efbe4786 0fc19dc6 240ca1cc 2de92c6f 4a7484aa 5cb0a9dc 76f988da ' +
+           '983e5152 a831c66d b00327c8 bf597fc7 c6e00bf3 d5a79147 06ca6351 14292967 ' +
+           '27b70a85 2e1b2138 4d2c6dfc 53380d13 650a7354 766a0abb 81c2c92e 92722c85 ' +
+           'a2bfe8a1 a81a664b c24b8b70 c76c51a3 d192e819 d6990624 f40e3585 106aa070 ' +
+           '19a4c116 1e376c08 2748774c 34b0bcb5 391c0cb3 4ed8aa4a 5b9cca4f 682e6ff3 ' +
+           '748f82ee 78a5636f 84c87814 8cc70208 90befffa a4506ceb bef9a3f7 c67178f2')
+          .split(' ').map(function (x) { return parseInt(x, 16) | 0; });
+  var H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+           0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  function rr(x, k) { return (x >>> k) | (x << (32 - k)); }
+
+  var s = String(text), b = [], i, j;
+  for (i = 0; i < s.length; i++) b.push(s.charCodeAt(i) & 255);
+  var bits = b.length * 8;
+  b.push(0x80);
+  while (b.length % 64 !== 56) b.push(0);
+  b.push(0, 0, 0, 0, (bits >>> 24) & 255, (bits >>> 16) & 255, (bits >>> 8) & 255, bits & 255);
+
+  var w = new Array(64), a, bq, c, d, e, f, g, h, t1, t2, s0, s1;
+  for (i = 0; i < b.length; i += 64) {
+    for (j = 0; j < 16; j++) {
+      w[j] = (b[i + j * 4] << 24) | (b[i + j * 4 + 1] << 16) |
+             (b[i + j * 4 + 2] << 8) | b[i + j * 4 + 3];
+    }
+    for (j = 16; j < 64; j++) {
+      s0 = rr(w[j - 15], 7) ^ rr(w[j - 15], 18) ^ (w[j - 15] >>> 3);
+      s1 = rr(w[j - 2], 17) ^ rr(w[j - 2], 19) ^ (w[j - 2] >>> 10);
+      w[j] = (((w[j - 16] + s0) | 0) + ((w[j - 7] + s1) | 0)) | 0;
+    }
+    a = H[0]; bq = H[1]; c = H[2]; d = H[3];
+    e = H[4]; f = H[5]; g = H[6]; h = H[7];
+    for (j = 0; j < 64; j++) {
+      t1 = (((h + (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25))) | 0) +
+            ((((e & f) ^ (~e & g)) + ((K[j] + w[j]) | 0)) | 0)) | 0;
+      t2 = ((rr(a, 2) ^ rr(a, 13) ^ rr(a, 22)) +
+            ((a & bq) ^ (a & c) ^ (bq & c))) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0;
+      d = c; c = bq; bq = a; a = (t1 + t2) | 0;
+    }
+    H[0] = (H[0] + a) | 0; H[1] = (H[1] + bq) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0;
+    H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
+  }
+  var aus = '';
+  for (i = 0; i < 8; i++) aus += ('0000000' + (H[i] >>> 0).toString(16)).slice(-8);
+  return aus;
+}
+
+function apiOk(url) {
+  var m = API_RE.exec(String(url === null || url === undefined ? '' : url));
+  return !!m && sha256ascii(m[1]) === API_HASH;
+}
+
+(function fromLink() {
+  var raw = (location.hash || '').replace(/^#/, '') || (location.search || '').replace(/^\?/, '');
+  if (!raw) return;
+  var api = new URLSearchParams(raw).get('api');
+  history.replaceState(null, '', location.pathname);
+  if (!api || !apiOk(api)) return;
+
+  if (cfg.tok && cfg.api && cfg.api !== api) return;
+  cfg.api = api; ls(K.cfg, cfg);
+})();
+
+var WT = { de:['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'],
+           zh:['周日', '周一', '周二', '周三', '周四', '周五', '周六'] };
+
+function zz(x) { return ('0' + x).slice(-2); }
+
+function normBarcode(raw) {
+  var d = String(raw === null || raw === undefined ? '' : raw).replace(/[^0-9]/g, '');
+  return d.length >= 18 ? '00' + d.slice(-18) : '';
+}
+function gleich(a, b) { var x = normBarcode(a); return x !== '' && x === normBarcode(b); }
+
+function gs1Ok(raw) {
+  var s = normBarcode(raw).slice(2);
+  if (!s) return false;
+  var sum = 0;
+  for (var i = 0; i < 17; i++) sum += Number(s.charAt(16 - i)) * (i % 2 === 0 ? 3 : 1);
+  return ((10 - sum % 10) % 10) === Number(s.charAt(17));
+}
+
+function runde(x) { return Math.round(x * 100) / 100; }
+
+function betragLesen(text) {
+  var s = String(text === null || text === undefined ? '' : text).replace(/[\s€]/g, '');
+  if (!s) return null;
+  if (s.indexOf(',') >= 0) {
+    var p = s.split(',');
+    if (p.length !== 2 || !/^(\d{1,3}(\.\d{3})+|\d+)$/.test(p[0]) || !/^\d{1,2}$/.test(p[1])) return null;
+    s = p[0].replace(/\./g, '') + '.' + p[1];
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(s)) {
+    s = s.replace(/\./g, '');
+  } else if (!/^\d+(\.\d{1,2})?$/.test(s)) {
+    return null;
+  }
+  var n = runde(Number(s));
+  return n > 0 && n < 1000000 ? n : null;
+}
+
+function betragText(x) {
+  var n = Number(x);
+  if (x === '' || x === null || x === undefined || !isFinite(n)) return '';
+  var teile = Math.abs(n).toFixed(2).split('.');
+  return (n < 0 ? '-' : '') + teile[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + teile[1];
+}
+
+function datumTeile(iso) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+}
+function datumText(iso) { var p = datumTeile(iso); return p ? zz(p[2]) + '.' + zz(p[1]) + '.' + p[0] : ''; }
+function datumKurz(iso) { var p = datumTeile(iso); return p ? zz(p[2]) + '.' + zz(p[1]) + '.' : ''; }
+function wochentag(iso) {
+  var p = datumTeile(iso);
+  return p ? WT[lang === 'zh' ? 'zh' : 'de'][new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay()] : '';
+}
+function tagePlus(iso, n) {
+  var p = datumTeile(iso);
+  if (!p) return '';
+  var d = new Date(Date.UTC(p[0], p[1] - 1, p[2] + n));
+  return d.getUTCFullYear() + '-' + zz(d.getUTCMonth() + 1) + '-' + zz(d.getUTCDate());
+}
+
+function zeitText(wert) {
+  var d = wert ? new Date(wert) : null;
+  if (!d || isNaN(d.getTime())) return '';
+  return zz(d.getDate()) + '.' + zz(d.getMonth() + 1) + '.' + d.getFullYear() + ' ' +
+         zz(d.getHours()) + ':' + zz(d.getMinutes()) + ':' + zz(d.getSeconds());
+}
+
+function neueRid() { return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); }
+
+function $(id) { return document.getElementById(id); }
+function show(el, on) { el.classList.toggle('hide', !on); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+  return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]; }); }
+function nummerHtml(barcode) {
+  var s = String(barcode || '');
+  return '<span class="nr">' + esc(s.slice(0, -6)) + '<b>' + esc(s.slice(-6)) + '</b></span>';
+}
+
+var actx = null;
+function beep(kind) {
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    var o = actx.createOscillator(), g = actx.createGain();
+    o.connect(g); g.connect(actx.destination);
+    o.frequency.value = kind === 'bad' ? 220 : kind === 'warn' ? 520 : 990;
+    g.gain.setValueAtTime(0.001, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.35, actx.currentTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + (kind === 'bad' ? 0.45 : 0.14));
+    o.start(); o.stop(actx.currentTime + (kind === 'bad' ? 0.46 : 0.15));
+  } catch (e) {}
+}
+
+var meldung = { kind:'', key:'ready', a:'', b:'', bKey:'' };
+function paint() {
+  var el = $('flash');
+  el.className = meldung.kind || '';
+  var a = meldung.key ? t(meldung.key) : meldung.a;
+  var b = meldung.bKey ? t(meldung.bKey) : meldung.b;
+  el.innerHTML = '<div class="a">' + esc(a) + '</div><div class="b">' + esc(b || '') + '</div>';
+}
+function signal(kind) {
+  beep(kind === 'bad' ? 'bad' : kind === 'warn' ? 'warn' : 'ok');
+  try { if (navigator.vibrate) navigator.vibrate(kind === 'bad' ? [90, 70, 90] : 45); } catch (e) {}
+}
+function flash(kind, a, b, bKey) {
+  meldung = { kind:kind, key:'', a:a, b:b, bKey:bKey || '' };
+  paint(); signal(kind);
+}
+function flashT(kind, key, b, bKey) {
+  meldung = { kind:kind, key:key, a:'', b:b, bKey:bKey || '' };
+  paint(); signal(kind);
+}
+
+function hinweis(key) {
+  meldung = { kind:'', key:key, a:'', b:'', bKey:'' };
+  paint();
+}
+
+var SPINNER = '<span class="spin"></span>';
+var pairBusy = false, laedt = false;
+
+function applyLang() {
+  document.documentElement.lang = lang === 'zh' ? 'zh' : 'de';
+  document.title = t('title');
+  Array.prototype.forEach.call(document.querySelectorAll('[data-t]'), function (el) {
+    el.textContent = t(el.dataset.t);
+  });
+  $('lang').textContent = lang === 'zh' ? '中' : 'DE';
+  $('btnCam').textContent = stream ? t('camOff') : t('cam');
+
+  if (pairBusy) $('cfgPair').innerHTML = SPINNER;
+  if (laedt) $('btnLaden').innerHTML = SPINNER;
+  zeichnen();
+  paint();
+}
+
+function mitFrist(p, ms) {
+  return new Promise(function (ok, fail) {
+    var uhr = setTimeout(function () { fail(new Error('frist')); }, ms);
+    p.then(function (v) { clearTimeout(uhr); ok(v); },
+           function (e) { clearTimeout(uhr); fail(e); });
+  });
+}
+
+function apiGet(action, params) {
+  var p = new URLSearchParams(Object.assign({ action:action, tok:cfg.tok }, params || {}));
+  return mitFrist(fetch(cfg.api + (cfg.api.indexOf('?') < 0 ? '?' : '&') + p.toString())
+    .then(function (r) { return r.json(); }), 20000).then(guard);
+}
+
+function apiPost(action, body) {
+  return mitFrist(fetch(cfg.api, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=UTF-8' },
+    body:JSON.stringify(Object.assign({ action:action, tok:cfg.tok }, body || {})) })
+    .then(function (r) { return r.json(); }), 90000).then(guard);
+}
+
+function guard(d) {
+  if (d && d.ok === false && d.code === 'auth') {
+    cfg.tok = ''; ls(K.cfg, cfg);
+    openSetup(true);
+    flashT('bad', 'needPair');
+  }
+  return d;
+}
+
+var stand = null, geladen = 0;
+var mode = 'abr';
+var arbeitet = false, sucht = false;
+
+function neueAbrechnung() { return { foto:'', vorschau:'', beutel:[], rid:'', leerRid:'', leerDatum:'' }; }
+function neueUebergabe() { return { foto:'', vorschau:'', haken:[], rid:'' }; }
+var abr = neueAbrechnung(), ueb = neueUebergabe();
+
+var FEHLER_KEY = { datum:'errDatum', exists:'errExists', gs1:'ungueltig', betrag:'errBetrag',
+                   foto:'errFoto', leer:'errLeer', nichtImTresor:'errTresor', abgeholt:'errAbgeholt',
+                   gezaehlt:'stGezaehlt', fremd:'andereFiliale', unknown:'notFound', forbidden:'forbidden',
+                   auth:'needPair' };
+var STATUS_KEY = { '保险柜':'stTresor', '已交出':'stAbgeholt', '已清点':'stGezaehlt', '系统外':'stFremd' };
+
+var NEU_LADEN = { datum:1, nichtImTresor:1, abgeholt:1, gezaehlt:1, exists:1, unknown:1 };
+
+function fehlerZeigen(d) {
+  if (!d) { flashT('bad', 'offline'); return; }
+  var zusatz = d.code === 'datum' ? datumText(d.next) :
+               d.barcode ? String(d.barcode).slice(-6) :
+               d.barcodes ? d.barcodes.map(function (b) { return String(b).slice(-6); }).join(' ') : '';
+  if (FEHLER_KEY[d.code]) flashT('bad', FEHLER_KEY[d.code], zusatz);
+  else flash('bad', d.error || d.code || '?', zusatz);
+}
+
+function istFiliale() { return cfg.rolle === '门店'; }
+
+function laden(still) {
+  if (!cfg.tok || !istFiliale()) return Promise.resolve(false);
+  return apiGet('stand').then(function (d) {
+    if (!d || !d.ok) { if (!still) fehlerZeigen(d); return false; }
+    standSetzen(d);
+    return true;
+  }, function () {
+    if (!still) flashT('bad', 'offline');
+    return false;
+  });
+}
+
+function standSetzen(s) {
+  stand = s; geladen = Date.now();
+  if (s.filiale) { cfg.filiale = s.filiale; ls(K.cfg, cfg); }
+
+  ueb.haken = ueb.haken.filter(imTresor);
+  kopfZeigen();
+  zeichnen();
+}
+
+function imTresor(barcode) {
+  return !!stand && (stand.tresor || []).some(function (x) { return gleich(x.barcode, barcode); });
+}
+
+function kopfZeigen() {
+  var f = cfg.filiale;
+  $('who').textContent = f && f.key ? f.key + (f.name ? ' ' + f.name : '') : (cfg.who || '');
+}
+
+function zeichnen() { abrZeichnen(); uebZeichnen(); }
+
+var fotoZaehler = 0;
+function fotoZeichnen(knopf, bild, o) {
+  knopf.classList.toggle('da', !!o.foto);
+  show(bild, !!o.foto);
+  var v = o.foto ? String(o.fotoNr) : '';
+  if (bild.dataset.v === v) return;
+  if (v) bild.src = o.vorschau; else bild.removeAttribute('src');
+  bild.dataset.v = v;
+}
+
+function abrFertig() { return !!stand && !!stand.start && !!stand.fertig; }
+
+function abrDatum() {
+  if (!stand) return '';
+  return stand.start ? stand.next : ($('startDatum').value || stand.heute);
+}
+function startOk(datum) {
+  return !!datumTeile(datum) && datum <= stand.heute && datum >= tagePlus(stand.heute, -366);
+}
+
+function abrZeichnen() {
+  var s = stand, karte = $('tagKarte');
+  var ohneStart = !!s && !s.start, fertig = abrFertig();
+  show(karte, !ohneStart);
+  show($('startBox'), ohneStart);
+  if (!s) {
+    karte.className = 'big';
+    karte.textContent = '–';
+  } else if (fertig) {
+    karte.className = 'big fertig';
+    karte.innerHTML = '&#10003; ' + esc(t('fertig')) + '<span class="wt">' +
+      esc(datumText(s.letzte ? s.letzte.datum : tagePlus(s.next, -1))) + '</span>';
+  } else if (!ohneStart) {
+    karte.className = 'big';
+    karte.innerHTML = esc(datumText(s.next)) + '<span class="wt">' + esc(wochentag(s.next)) + '</span>';
+  } else {
+    var d = $('startDatum');
+    d.max = s.heute;
+    d.min = tagePlus(s.heute, -366);
+    if (!d.value) d.value = s.heute;
+  }
+  var z = s && s.letzte, leer = !!z && z.typ === '无钱袋';
+  $('zuletztText').textContent = !z ? '' : t('zuletzt') + ' ' + datumKurz(z.datum) + ' · ' +
+    (leer ? t('leerTag') : z.anzahl + ' ' + t('stk') + ' · ' + betragText(z.summe));
+  show($('btnLeerZurueck'), leer);
+  var offen = !!s && !fertig;
+  show($('abrArbeit'), offen);
+  show($('abrListe'), offen);
+  show($('abrSumme'), offen);
+  show($('abrKnoepfe'), offen);
+  fotoZeichnen($('btnFotoAbr'), $('imgAbr'), abr);
+  abrListeZeichnen();
+  abrSummeZeichnen();
+}
+
+function abrListeZeichnen() {
+  $('abrListe').innerHTML = abr.beutel.map(function (b, i) {
+    var falsch = b.text.trim() !== '' && betragLesen(b.text) === null;
+    return '<div class="row"><span class="g">' + nummerHtml(b.barcode) + '</span>' +
+      '<input class="betrag' + (falsch ? ' falsch' : '') + '" type="text" inputmode="decimal" autocomplete="off"' +
+      ' placeholder="0,00" data-i="' + i + '" value="' + esc(b.text) + '">' +
+      '<span class="x" data-rm="' + i + '">&times;</span></div>';
+  }).join('');
+}
+
+function abrBetraege() { return abr.beutel.map(function (b) { return betragLesen(b.text); }); }
+
+function abrSummeZeichnen() {
+  var werte = abrBetraege(), summe = 0, alle = werte.length > 0;
+  werte.forEach(function (w) { if (w === null) alle = false; else summe += w; });
+  $('abrSumme').textContent = werte.length ? werte.length + ' ' + t('stk') + ' · ' + betragText(runde(summe)) : '';
+  var offen = !!stand && !abrFertig();
+  $('btnBuchen').disabled = arbeitet || !offen || !abr.foto || !alle;
+  $('btnLeer').disabled = arbeitet || !offen || abr.beutel.length > 0;
+}
+
+function fokusBetrag(i) {
+  var el = document.querySelector('#abrListe input[data-i="' + i + '"]');
+  if (el) { try { el.focus(); } catch (e) {} }
+}
+
+function abrScan(code) {
+  if (!stand) { laden(); return; }
+  var kurz = code.slice(-6);
+  if (!gs1Ok(code)) { flashT('bad', 'ungueltig', kurz); return; }
+  if (abr.beutel.some(function (b) { return gleich(b.barcode, code); })) { flashT('warn', 'doppelt', kurz); return; }
+  sucht = true;
+  hinweis('reading');
+  apiGet('beutel', { q:code }).then(function (d) {
+    sucht = false;
+    if (!d || !d.ok) { fehlerZeigen(d); return; }
+    if (!d.found) {
+      if (d.gs1 === false) { flashT('bad', 'ungueltig', kurz); return; }
+      if (abrFertig()) { flashT('warn', 'erledigtHeute', kurz); return; }
+      if (abr.beutel.length >= 10) { flashT('warn', 'maxBeutel'); return; }
+      abr.beutel.push({ barcode:d.barcode || code, text:'' });
+      abr.rid = '';
+      abrListeZeichnen();
+      abrSummeZeichnen();
+      flashT('ok', 'neu', kurz);
+      fokusBetrag(abr.beutel.length - 1);
+      return;
+    }
+    if (d.eigen && d.status === '保险柜' && d.abrechnung) { abrZurueckFragen(d); return; }
+    flashT('warn', d.eigen ? (STATUS_KEY[d.status] || 'errExists') : 'errExists', kurz);
+  }, function () { sucht = false; flashT('bad', 'offline'); });
+}
+
+function beutelZeile(barcode, betrag, rechts) {
+  return '<div class="row"><span class="g">' + nummerHtml(barcode) +
+    (rechts ? '<div class="s">' + esc(rechts) + '</div>' : '') + '</span>' +
+    '<span class="eur">' + esc(betragText(betrag)) + '</span></div>';
+}
+function datumGross(datum) {
+  return esc(datumText(datum)) + '<span class="wt">' + esc(wochentag(datum)) + '</span>';
+}
+
+function abrBuchenFragen() {
+  if (arbeitet || !stand || abrFertig()) return;
+  var datum = abrDatum(), werte = abrBetraege();
+  if (!stand.start && !startOk(datum)) { flashT('bad', 'errStart', datumText(datum)); return; }
+  if (!abr.foto || !werte.length || werte.some(function (w) { return w === null; })) return;
+  var summe = runde(werte.reduce(function (a, b) { return a + b; }, 0));
+  frage({ gross:datumGross(datum),
+          zeilen:abr.beutel.map(function (b, i) { return beutelZeile(b.barcode, werte[i]); }),
+          summe:werte.length + ' ' + t('stk') + ' · ' + betragText(summe),
+          knopf:t('bestaetigen') }, function () {
+
+    if (!abr.rid) abr.rid = neueRid();
+    var gesendet = abr;
+    schreiben('abrechnung', { rid:abr.rid, datum:datum, foto:abr.foto,
+      beutel:abr.beutel.map(function (b, i) { return { barcode:b.barcode, betrag:werte[i] }; }) }, function () {
+      if (abr === gesendet) abr = neueAbrechnung();
+      $('startDatum').value = '';
+      zeichnen();
+      flash('ok', t('abrDone') + ' ' + datumText(datum), werte.length + ' ' + t('stk') + ' · ' + betragText(summe));
+    });
+  });
+}
+
+function leerFragen() {
+  if (arbeitet || !stand || abrFertig() || abr.beutel.length) return;
+  var datum = abrDatum();
+  if (!stand.start && !startOk(datum)) { flashT('bad', 'errStart', datumText(datum)); return; }
+  frage({ titel:t('leerTag'), gross:datumGross(datum), knopf:t('bestaetigen') }, function () {
+    if (!abr.leerRid || abr.leerDatum !== datum) { abr.leerRid = neueRid(); abr.leerDatum = datum; }
+    schreiben('leertag', { rid:abr.leerRid, datum:datum }, function () {
+
+      abr = neueAbrechnung();
+      $('startDatum').value = '';
+      zeichnen();
+      flash('ok', t('leerDone'), datumText(datum));
+    });
+  });
+}
+
+function leerZurueckFragen() {
+  var z = stand && stand.letzte;
+  if (arbeitet || !z || z.typ !== '无钱袋') return;
+  frage({ titel:t('leerZurueck'), gross:datumGross(z.datum), knopf:t('zurueck'), rot:true }, function () {
+    schreiben('leertagZurueck', { datum:z.datum }, function () {
+      flash('ok', t('zurueckDone'), datumText(z.datum));
+    });
+  });
+}
+
+function abrZurueckFragen(d) {
+  var a = d.abrechnung, liste = a.beutel || [];
+  frage({ titel:t('abrZurueck'), gross:datumGross(a.datum),
+          zeilen:liste.map(function (b) {
+            return beutelZeile(b.barcode, b.betrag, b.status && b.status !== '保险柜' ? t(STATUS_KEY[b.status] || '') : '');
+          }),
+          summe:liste.length + ' ' + t('stk') + ' · ' + betragText(a.summe),
+          knopf:t('zurueck'), rot:true }, function () {
+    schreiben('abrechnungZurueck', { barcode:d.barcode }, function () {
+      flash('ok', t('zurueckDone'), datumText(a.datum));
+    });
+  });
+}
+
+function istAngehakt(barcode) { return ueb.haken.some(function (x) { return gleich(x, barcode); }); }
+
+function uebAuswahl() {
+  return (stand ? stand.tresor || [] : []).filter(function (b) { return istAngehakt(b.barcode); });
+}
+
+function uebZeichnen() {
+  var liste = stand ? stand.tresor || [] : [];
+  var el = $('tresorListe');
+  if (!stand) el.innerHTML = '';
+  else if (!liste.length) el.innerHTML = '<div class="leer">' + esc(t('tresorLeer')) + '</div>';
+  else el.innerHTML = liste.map(function (b) {
+    var an = istAngehakt(b.barcode);
+    return '<div class="row' + (an ? ' an' : '') + '"><span class="haken">' + (an ? '&#10003;' : '&#9675;') + '</span>' +
+      '<span class="g"><b>' + esc(datumText(b.datum)) + '</b><div>' + nummerHtml(b.barcode) + '</div></span>' +
+      '<span class="eur">' + esc(betragText(b.betrag)) + '</span>' +
+      (an ? '<span class="x" data-weg="' + esc(b.barcode) + '">&times;</span>' : '') + '</div>';
+  }).join('');
+  var wahl = uebAuswahl();
+  var summe = runde(wahl.reduce(function (a, b) { return a + Number(b.betrag || 0); }, 0));
+  $('uebSumme').textContent = wahl.length ? t('gescannt') + ' ' + wahl.length + ' ' + t('stk') + ' · ' + betragText(summe) : '';
+  show($('uebArbeit'), !!stand);
+  fotoZeichnen($('btnFotoUeb'), $('imgUeb'), ueb);
+  $('btnUebBuchen').disabled = arbeitet || !wahl.length || !ueb.foto;
+}
+
+function uebScan(code) {
+  if (!stand) { laden(); return; }
+  var kurz = code.slice(-6);
+  var b = (stand.tresor || []).filter(function (x) { return gleich(x.barcode, code); })[0];
+  if (b) {
+    if (istAngehakt(b.barcode)) { flashT('warn', 'schonGescannt', kurz); return; }
+    ueb.haken.push(b.barcode);
+    ueb.rid = '';
+    uebZeichnen();
+    flash('ok', betragText(b.betrag), datumText(b.datum) + '  ' + kurz);
+    return;
+  }
+  sucht = true;
+  hinweis('reading');
+  apiGet('beutel', { q:code }).then(function (d) {
+    sucht = false;
+    if (!d || !d.ok) { fehlerZeigen(d); return; }
+    if (d.found && d.eigen && d.status === '已交出') { uebZurueckFragen(d); return; }
+    if (d.found && d.eigen && d.status === '保险柜') {
+
+      laden(true).then(function () {
+        if (imTresor(code)) uebScan(code); else flashT('bad', 'fremd', kurz);
+      });
+      return;
+    }
+    if (d.found && d.eigen && d.status === '已清点') { flashT('warn', 'stGezaehlt', kurz); return; }
+    flashT('bad', 'fremd', kurz);
+  }, function () { sucht = false; flashT('bad', 'offline'); });
+}
+
+function uebZurueckFragen(d) {
+  frage({ titel:t('uebZurueck'), gross:esc(betragText(d.betrag)),
+          zeilen:['<div class="row"><span class="g">' + nummerHtml(d.barcode) +
+                  '<div class="s">' + esc(datumText(d.datum)) + '</div></span></div>',
+                  d.abholungAm ? '<div class="hint">' + esc(t('abgegeben') + ' ' + zeitText(d.abholungAm)) + '</div>' : ''],
+          knopf:t('zurueck'), rot:true }, function () {
+    schreiben('abholungZurueck', { barcode:d.barcode }, function () {
+      flash('ok', t('zurueckDone'), betragText(d.betrag) + '  ' + String(d.barcode).slice(-6));
+    });
+  });
+}
+
+function uebBuchen() {
+  if (arbeitet || !stand) return;
+  var wahl = uebAuswahl();
+  if (!wahl.length || !ueb.foto) return;
+  var codes = wahl.map(function (b) { return b.barcode; });
+  var summe = runde(wahl.reduce(function (a, b) { return a + Number(b.betrag || 0); }, 0));
+  if (!ueb.rid) ueb.rid = neueRid();
+  var gesendet = ueb;
+  schreiben('abholung', { rid:ueb.rid, foto:ueb.foto, barcodes:codes }, function () {
+    if (ueb === gesendet) ueb = neueUebergabe();
+    uebZeichnen();
+    flash('ok', t('uebDone'), codes.length + ' ' + t('stk') + ' · ' + betragText(summe));
+  });
+}
+
+function schreiben(action, body, fertig) {
+  if (arbeitet) return;
+  beschaeftigt(true);
+  apiPost(action, body).then(function (d) {
+    beschaeftigt(false);
+    if (!d || !d.ok) {
+      fehlerZeigen(d);
+      if (d && NEU_LADEN[d.code]) laden(true);
+      return;
+    }
+    if (d.stand) standSetzen(d.stand); else laden(true);
+    fertig(d);
+  }, function () {
+    beschaeftigt(false);
+    flashT('bad', 'offline');
+  });
+}
+
+function beschaeftigt(on) {
+  arbeitet = on;
+  show($('busy'), on);
+  if (on && stream) stopCam();
+  abrSummeZeichnen();
+  $('btnUebBuchen').disabled = on || !uebAuswahl().length || !ueb.foto;
+}
+
+var dialogJa = null, dialogOffen = false;
+function frage(o, ja) {
+  if (stream) stopCam();
+  dialogOffen = true;
+  dialogJa = ja;
+  $('dlgTitel').textContent = o.titel || '';
+  $('dlgGross').innerHTML = o.gross || '';
+  show($('dlgGross'), !!o.gross);
+  $('dlgListe').innerHTML = (o.zeilen || []).join('');
+  $('dlgSumme').textContent = o.summe || '';
+  $('dlgJa').textContent = o.knopf;
+  $('dlgJa').className = 'b' + (o.rot ? ' rot' : '');
+  show($('dlg'), true);
+}
+function frageZu() {
+  dialogOffen = false;
+  dialogJa = null;
+  show($('dlg'), false);
+  lastText = '';
+}
+$('dlgNein').onclick = frageZu;
+$('dlgJa').onclick = function () { var ja = dialogJa; frageZu(); if (ja) ja(); };
+
+var FOTO_KANTE = 1600, FOTO_GUETE = 0.7;
+
+function fotoLesen(datei) {
+  return new Promise(function (fertig, fehler) {
+    var url = URL.createObjectURL(datei), img = new Image();
+    img.onload = function () {
+      try {
+        var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+        var f = Math.min(1, FOTO_KANTE / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(w * f));
+        c.height = Math.max(1, Math.round(h * f));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        var daten = c.toDataURL('image/jpeg', FOTO_GUETE);
+        if (daten.length > 3000000) daten = c.toDataURL('image/jpeg', 0.5);
+        URL.revokeObjectURL(url);
+        fertig({ vorschau:daten, foto:daten.slice(daten.indexOf(',') + 1) });
+      } catch (e) {
+        URL.revokeObjectURL(url);
+        fehler(e);
+      }
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); fehler(new Error('bild')); };
+    img.src = url;
+  });
+}
+
+function fotoKnopf(knopf, eingabe, bild, ziel) {
+  knopf.onclick = function () { if (!arbeitet) eingabe.click(); };
+  bild.onclick = knopf.onclick;
+  eingabe.onchange = function (ev) {
+    var datei = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if (!datei) return;
+    knopf.innerHTML = SPINNER;
+    fotoLesen(datei).then(function (r) {
+      var o = ziel();
+      o.foto = r.foto;
+      o.vorschau = r.vorschau;
+      o.fotoNr = ++fotoZaehler;
+      o.rid = '';
+      knopf.textContent = t(knopf.dataset.t);
+      zeichnen();
+    }, function () {
+      knopf.textContent = t(knopf.dataset.t);
+      flashT('bad', 'fotoFehler');
+    });
+  };
+}
+fotoKnopf($('btnFotoAbr'), $('fotoAbr'), $('imgAbr'), function () { return abr; });
+fotoKnopf($('btnFotoUeb'), $('fotoUeb'), $('imgUeb'), function () { return ueb; });
+
+var lastText = '', lastAt = 0;
+
+function onScan(text) {
+  if (dialogOffen || arbeitet || sucht || !istFiliale()) return;
+  var now = Date.now();
+
+  if (text === lastText && now - lastAt < 2500) { lastAt = now; return; }
+  lastText = text; lastAt = now;
+  var code = normBarcode(text);
+  if (!code) { flashT('bad', 'noRead'); return; }
+
+  if (stream) stopCam();
+  if (mode === 'ueb') uebScan(code); else abrScan(code);
+}
+
+var stream = null, detector = null, timer = 0, zx = null, zxCanvas = null;
+function hints() {
+  var h = new Map();
+  h.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.ITF]);
+  h.set(ZXing.DecodeHintType.TRY_HARDER, true);
+  return h;
+}
+function nativeDetector() {
+  if (!('BarcodeDetector' in window) || typeof window.BarcodeDetector.getSupportedFormats !== 'function') {
+    return Promise.resolve(null);
+  }
+  return window.BarcodeDetector.getSupportedFormats().then(function (f) {
+    if (!f || f.indexOf('code_128') < 0) return null;
+    return new window.BarcodeDetector({ formats:['code_128', 'itf'].filter(function (x) { return f.indexOf(x) >= 0; }) });
+  }).catch(function () { return null; });
+}
+function zxDecodeFrame(v) {
+  var w = v.videoWidth, h = v.videoHeight;
+  if (!w || !h) return null;
+  var scale = w > 1280 ? 1280 / w : 1;
+  var cw = Math.round(w * scale), ch = Math.round(h * scale);
+  if (!zxCanvas) zxCanvas = document.createElement('canvas');
+  if (zxCanvas.width !== cw || zxCanvas.height !== ch) { zxCanvas.width = cw; zxCanvas.height = ch; }
+  zxCanvas.getContext('2d', { willReadFrequently:true }).drawImage(v, 0, 0, cw, ch);
+  var src = new ZXing.HTMLCanvasElementLuminanceSource(zxCanvas);
+  var bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src));
+  try { return zx.decodeWithState(bmp); } catch (e) { return null; }
+}
+function scanLoop(v) {
+  var useNative = !!detector, nativeMiss = 0;
+  (function tick() {
+    if (!stream) return;
+    if (v.readyState < 2 || !v.videoWidth) { timer = setTimeout(tick, 120); return; }
+    if (useNative) {
+      detector.detect(v).then(function (c) {
+        if (c && c.length) { nativeMiss = 0; onScan(c[0].rawValue); }
+        else if (++nativeMiss > 60) useNative = false;
+      }).catch(function () { useNative = false; }).then(function () {
+        if (stream) timer = setTimeout(tick, 180);
+      });
+      return;
+    }
+    if (!zx) { zx = new ZXing.MultiFormatReader(); zx.setHints(hints()); }
+    var r = zxDecodeFrame(v);
+    if (r) onScan(r.getText());
+    timer = setTimeout(tick, r ? 400 : 120);
+  })();
+}
+
+var kameraStartet = false;
+function startCam() {
+  if (kameraStartet || stream) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { flashT('bad', 'noCam'); return; }
+  kameraStartet = true;
+  beep('ok');
+  var v = $('video');
+  navigator.mediaDevices.getUserMedia({
+    video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1920 }, height:{ ideal:1080 } }, audio:false
+  }).then(function (s) {
+    kameraStartet = false;
+    stream = s; v.srcObject = s;
+    show($('cam'), true); $('btnCam').textContent = t('camOff');
+    return v.play().catch(function () {});
+  }).then(nativeDetector).then(function (d) {
+    detector = d;
+    scanLoop(v);
+  }).catch(function (e) {
+    kameraStartet = false;
+    stopCam();
+    flashT('bad', 'noCam', (e && e.name) || '');
+  });
+}
+function stopCam() {
+  if (timer) { clearTimeout(timer); timer = 0; }
+  detector = null;
+  if (stream) { stream.getTracks().forEach(function (x) { x.stop(); }); stream = null; }
+  $('video').srcObject = null;
+  show($('cam'), false); $('btnCam').textContent = t('cam');
+}
+$('btnCam').onclick = function () { stream ? stopCam() : startCam(); };
+
+$('btnShot').onclick = function () { $('photo').click(); };
+$('photo').onchange = function (ev) {
+  var f = ev.target.files && ev.target.files[0];
+  ev.target.value = '';
+  if (!f) return;
+  hinweis('reading');
+  var img = new Image();
+  img.onload = function () {
+    new ZXing.BrowserMultiFormatReader(hints()).decodeFromImageElement(img)
+      .then(function (r) { URL.revokeObjectURL(img.src); onScan(r.getText()); })
+      .catch(function () { URL.revokeObjectURL(img.src); flashT('bad', 'noRead'); });
+  };
+  img.src = URL.createObjectURL(f);
+};
+
+$('manForm').onsubmit = function (e) {
+  e.preventDefault();
+  var v = $('manual').value.trim();
+  if (!v) return;
+  lastText = '';
+  onScan(v); $('manual').value = ''; $('manHint').textContent = '';
+};
+$('manual').oninput = function () {
+  var d = $('manual').value.replace(/[^0-9]/g, '');
+  if (d.length >= 18) {
+    $('manHint').innerHTML = gs1Ok(d)
+      ? '<span style="color:var(--ok)">&#10003;</span>'
+      : '<span style="color:var(--bad)">&#10007; ' + esc(t('check')) + '</span>';
+  } else {
+    $('manHint').textContent = d.length ? d.length + '/18' : '';
+  }
+};
+
+$('abrListe').oninput = function (ev) {
+  var el = ev.target, i = el && el.dataset ? Number(el.dataset.i) : NaN;
+  if (!(i >= 0) || !abr.beutel[i]) return;
+  abr.beutel[i].text = el.value;
+  abr.rid = '';
+  el.classList.toggle('falsch', el.value.trim() !== '' && betragLesen(el.value) === null);
+  abrSummeZeichnen();
+};
+$('abrListe').onclick = function (ev) {
+  var el = ev.target, i = el && el.dataset && el.dataset.rm !== undefined ? Number(el.dataset.rm) : NaN;
+  if (!(i >= 0) || !abr.beutel[i] || arbeitet) return;
+  abr.beutel.splice(i, 1);
+  abr.rid = '';
+  lastText = '';
+  abrListeZeichnen();
+  abrSummeZeichnen();
+};
+$('tresorListe').onclick = function (ev) {
+  var weg = ev.target && ev.target.dataset ? ev.target.dataset.weg : undefined;
+  if (!weg || arbeitet) return;
+  ueb.haken = ueb.haken.filter(function (x) { return !gleich(x, weg); });
+  ueb.rid = '';
+  lastText = '';
+  uebZeichnen();
+};
+$('startDatum').onchange = function () { abr.rid = ''; abr.leerRid = ''; };
+$('btnBuchen').onclick = abrBuchenFragen;
+$('btnLeer').onclick = leerFragen;
+$('btnLeerZurueck').onclick = leerZurueckFragen;
+$('btnUebBuchen').onclick = uebBuchen;
+
+function modusSetzen(neu) {
+  mode = neu === 'ueb' ? 'ueb' : 'abr';
+  if (stream) stopCam();
+  Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (x) {
+    x.classList.toggle('sel', x.dataset.mode === mode);
+  });
+  show($('mAbr'), istFiliale() && mode === 'abr');
+  show($('mUeb'), istFiliale() && mode === 'ueb');
+  $(mode === 'ueb' ? 'platzUeb' : 'platzAbr').appendChild($('scanBox'));
+  lastText = '';
+}
+Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) {
+  b.onclick = function () {
+    if (arbeitet) return;
+    modusSetzen(b.dataset.mode);
+    hinweis(mode === 'ueb' ? 'tabUeb' : 'tabAbr');
+    laden(true);
+  };
+});
+
+function rolleRichten() {
+  var ja = istFiliale();
+  show($('nav'), ja);
+  show($('scanBox'), ja);
+  show($('btnLaden'), ja);
+  show($('nurFiliale'), !ja);
+  modusSetzen(mode);
+}
+
+$('btnLaden').onclick = function () {
+  if (laedt || arbeitet) return;
+  var b = $('btnLaden');
+  laedt = true;
+  b.disabled = true;
+  b.innerHTML = SPINNER;
+  laden().then(function (ok) {
+    laedt = false;
+    b.disabled = false;
+    b.textContent = t('reload');
+    if (ok) flashT('ok', 'reload');
+  });
+};
+$('lang').onclick = function () { lang = lang === 'zh' ? 'de' : 'zh'; ls(K.lang, lang); applyLang(); };
+
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible' && cfg.tok && !arbeitet && Date.now() - geladen > 60000) laden(true);
+});
+
+function openSetup(on) {
+  if (on && stream) stopCam();
+  show($('setup'), on); show($('app'), !on);
+  if (!on) return;
+  $('cfgCode').value = '';
+  show($('pairBox'), !cfg.tok);
+  show($('doneBox'), !!cfg.tok);
+  $('meName').textContent = cfg.who || '';
+  $('meRole').textContent = (cfg.rolle || '') + (cfg.filiale && cfg.filiale.key ? ' ' + cfg.filiale.key : '');
+}
+$('gear').onclick = function () {
+  if (arbeitet) return;
+  var zu = $('setup').classList.contains('hide');
+  if (!zu && !cfg.tok) return;
+  openSetup(zu);
+};
+
+function setPairBusy(on) {
+  pairBusy = on;
+  var b = $('cfgPair');
+  b.disabled = on;
+  b.innerHTML = on ? SPINNER : esc(t('save'));
+  $('cfgCode').disabled = on;
+}
+
+$('cfgPair').onclick = function () {
+  if (pairBusy) return;
+
+  var code = $('cfgCode').value.trim().toUpperCase();
+  if (!apiOk(cfg.api) || !code) { $('cfgMsg').textContent = t('pairFail'); return; }
+  $('cfgMsg').textContent = '';
+  setPairBusy(true);
+  apiPost('pair', { code:code }).then(function (d) {
+    setPairBusy(false);
+
+    if (!d || !d.ok) { $('cfgMsg').textContent = t('pairFail'); return; }
+    cfg.tok = d.token; cfg.who = d.who || ''; cfg.rolle = d.role || ''; cfg.filiale = d.filiale || null;
+    ls(K.cfg, cfg);
+    boot();
+  }, function () {
+    setPairBusy(false);
+    $('cfgMsg').textContent = t('pairFail');
+  });
+};
+
+$('cfgUnpair').onclick = function () {
+  cfg.tok = ''; cfg.who = ''; cfg.rolle = ''; cfg.filiale = null; ls(K.cfg, cfg);
+  stand = null; abr = neueAbrechnung(); ueb = neueUebergabe();
+  kopfZeigen();
+  openSetup(true);
+};
+
+$('cfgCode').oninput = function () {
+  this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+};
+
+function werBinIch() {
+  return apiGet('whoami').then(function (d) {
+    if (!d || !d.ok) return;
+    cfg.rolle = d.role || '';
+    cfg.who = d.who || cfg.who;
+    cfg.filiale = d.filiale || null;
+    ls(K.cfg, cfg);
+  }, function () {});
+}
+
+function boot() {
+  openSetup(false);
+  meldung = { kind:'', key:'ready', a:'', b:'', bKey:'' };
+  kopfZeigen();
+  rolleRichten();
+  applyLang();
+  return werBinIch().then(function () {
+    if (!cfg.tok) return;
+    kopfZeigen();
+    rolleRichten();
+    return laden();
+  });
+}
+
+lang = ls(K.lang) || ((navigator.language || '').slice(0, 2) === 'zh' ? 'zh' : 'de');
+if (cfg.api && cfg.tok) {
+  boot();
+} else {
+  openSetup(true);
+  applyLang();
+}
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+})();
+</script>
+</body>
+</html>
