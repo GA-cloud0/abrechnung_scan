@@ -639,8 +639,11 @@ function fehlerZeigen(d) {
 
 function istFiliale() { return cfg.rolle === '门店'; }
 
+var nachDemLaden = null;
 function ladenFertig() {
-  if (meldung.kind === 'laden' && meldung.key === 'laedt') wartenAus();
+  if (meldung.kind !== 'laden' || meldung.key !== 'laedt') return;
+  if (nachDemLaden) { meldung = nachDemLaden; nachDemLaden = null; paint(); }
+  else wartenAus();
 }
 function laden(still, kurz) {
   if (!cfg.tok || !istFiliale()) return Promise.resolve(false);
@@ -1292,7 +1295,7 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
 window.addEventListener('offline', function () { setNet(false); });
 
-var BUILD = '221cf09f8ec5';
+var BUILD = '43ea78ce4dcf';
 var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
 var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
 
@@ -1399,7 +1402,8 @@ function boot() {
   meldung = { kind:'laden', key:'laedt', a:'', b:'', bKey:'' };
 
   var neu = ls(K.neu);
-  if (neu) { ls(K.neu, ''); if (neu === BUILD) meldung = { kind:'ok', key:'updated', a:'', b:'', bKey:'' }; }
+  nachDemLaden = null;
+  if (neu) { ls(K.neu, ''); if (neu === BUILD) nachDemLaden = { kind:'ok', key:'updated', a:'', b:'', bKey:'' }; }
   kopfZeigen();
   rolleRichten();
   applyLang();
