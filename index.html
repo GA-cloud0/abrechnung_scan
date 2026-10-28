@@ -158,11 +158,6 @@
     border-top-color:var(--accent); }
 
   .spin.dunkel { border-color:rgba(31,58,95,.2); border-top-color:var(--accent); }
-  .big .spin.dunkel { width:30px; height:30px; border-width:4px; vertical-align:-5px; margin-right:8px; }
-  .tag .spin { width:11px; height:11px; border-width:2px; border-color:rgba(31,58,95,.25);
-    border-top-color:var(--kopf); vertical-align:-1px; }
-  .tag.off .spin { border-color:rgba(255,255,255,.35); border-top-color:#fff; }
-  .big.laedt { font-size:24px; color:var(--dim); border-color:var(--line); }
 
   #dlg { position:fixed; inset:0; z-index:30; background:rgba(10,20,35,.55); display:flex;
     align-items:center; justify-content:center; padding:14px; }
@@ -545,11 +540,16 @@ function flashT(kind, key, b, bKey) {
 }
 
 function hinweis(key) {
+  meldung = { kind:'', key:key, a:'', b:'', bKey:'' };
+  paint();
+}
+
+function warten(key) {
   meldung = { kind:'laden', key:key, a:'', b:'', bKey:'' };
   paint();
 }
 
-function hinweisAus() {
+function wartenAus() {
   if (meldung.kind !== 'laden') return;
   meldung = { kind:'', key:'ready', a:'', b:'', bKey:'' };
   paint();
@@ -568,7 +568,6 @@ function applyLang() {
   $('btnCam').textContent = stream ? t('camOff') : t('cam');
 
   if (pairBusy) $('cfgPair').innerHTML = SPINNER;
-  if (laedt) $('btnLaden').innerHTML = SPINNER;
   zeichnen();
   paint();
 }
@@ -581,32 +580,19 @@ function mitFrist(p, ms) {
   });
 }
 
-var netzOk = true, laufend = 0;
 function setNet(on) {
-  netzOk = on;
-  netzZeigen();
-}
-function netzZeigen() {
   var el = $('net');
-  el.className = 'tag ' + (netzOk ? 'on' : 'off');
-  if (laufend > 0) el.innerHTML = SPINNER;
-  else el.textContent = netzOk ? '●' : '○';
+  el.textContent = on ? '●' : '○';
+  el.className = 'tag ' + (on ? 'on' : 'off');
+}
+function netz(p) {
+  return p.then(function (d) { setNet(true); return d; }, function (e) { setNet(false); throw e; });
 }
 
-function netz(p, leise) {
-  if (leise) {
-    return p.then(function (d) { setNet(true); return d; }, function (e) { setNet(false); throw e; });
-  }
-  laufend++;
-  netzZeigen();
-  return p.then(function (d) { laufend--; setNet(true); return d; },
-                function (e) { laufend--; setNet(false); throw e; });
-}
-
-function apiGet(action, params, leise) {
+function apiGet(action, params) {
   var p = new URLSearchParams(Object.assign({ action:action, tok:cfg.tok }, params || {}));
   return netz(mitFrist(fetch(cfg.api + (cfg.api.indexOf('?') < 0 ? '?' : '&') + p.toString())
-    .then(function (r) { return r.json(); }), 20000), leise).then(guard);
+    .then(function (r) { return r.json(); }), 20000)).then(guard);
 }
 
 function apiPost(action, body) {
@@ -653,28 +639,21 @@ function fehlerZeigen(d) {
 
 function istFiliale() { return cfg.rolle === '门店'; }
 
-var ersterLauf = false;
-function ersterLaufAus() {
-  if (ersterLauf) {
-    ersterLauf = false;
-    zeichnen();
-  }
-  if (meldung.kind === 'laden' && meldung.key === 'laedt') hinweisAus();
+function ladenFertig() {
+  if (meldung.kind === 'laden' && meldung.key === 'laedt') wartenAus();
 }
 function laden(still, kurz) {
   if (!cfg.tok || !istFiliale()) return Promise.resolve(false);
   var p = kurz && stand && stand.nr ? { nr:stand.nr, heute:stand.heute } : {};
-  if (!stand && !ersterLauf) { ersterLauf = true; zeichnen(); }
-  var fertig = ersterLaufAus;
-  return apiGet('stand', p, !!kurz).then(function (d) {
-    fertig();
+  return apiGet('stand', p).then(function (d) {
+    ladenFertig();
     if (!d || !d.ok) { if (!still) fehlerZeigen(d); return false; }
     if (d.sek !== undefined) syncSek = Number(d.sek) || 0;
     if (d.same) { geladen = Date.now(); return true; }
     standSetzen(d);
     return true;
   }, function () {
-    fertig();
+    ladenFertig();
     if (!still) flashT('bad', 'offline');
     return false;
   });
@@ -726,10 +705,7 @@ function abrZeichnen() {
   var ohneStart = !!s && !s.start, fertig = abrFertig();
   show(karte, !ohneStart);
   show($('startBox'), ohneStart);
-  if (!s && ersterLauf) {
-    karte.className = 'big laedt';
-    karte.innerHTML = '<span class="spin dunkel"></span>' + esc(t('laedt'));
-  } else if (!s) {
+  if (!s) {
     karte.className = 'big';
     karte.textContent = '–';
   } else if (fertig) {
@@ -795,10 +771,10 @@ function abrScan(code) {
   if (!gs1Ok(code)) { flashT('bad', 'ungueltig', kurz); return; }
   if (abr.beutel.some(function (b) { return gleich(b.barcode, code); })) { flashT('warn', 'doppelt', kurz); return; }
   sucht = true;
-  hinweis('suche');
+  warten('suche');
   apiGet('beutel', { q:code }).then(function (d) {
     sucht = false;
-    hinweisAus();
+    wartenAus();
     if (!d || !d.ok) { fehlerZeigen(d); return; }
     if (!d.found) {
       if (d.gs1 === false) { flashT('bad', 'ungueltig', kurz); return; }
@@ -898,8 +874,7 @@ function uebAuswahl() {
 function uebZeichnen() {
   var liste = stand ? stand.tresor || [] : [];
   var el = $('tresorListe');
-  if (!stand && ersterLauf) el.innerHTML = '<div class="leer"><span class="spin dunkel"></span> ' + esc(t('laedt')) + '</div>';
-  else if (!stand) el.innerHTML = '';
+  if (!stand) el.innerHTML = '';
   else if (!liste.length) el.innerHTML = '<div class="leer">' + esc(t('tresorLeer')) + '</div>';
   else el.innerHTML = liste.map(function (b) {
     var an = istAngehakt(b.barcode);
@@ -933,10 +908,10 @@ function uebScan(code) {
     return;
   }
   sucht = true;
-  hinweis('suche');
+  warten('suche');
   apiGet('beutel', { q:code }).then(function (d) {
     sucht = false;
-    hinweisAus();
+    wartenAus();
     if (!d || !d.ok) { fehlerZeigen(d); return; }
     if (d.found && d.eigen && d.status === '已交出') { uebZurueckFragen(d); return; }
     if (d.found && d.eigen && d.status === '保险柜') {
@@ -998,6 +973,8 @@ function schreiben(action, body, fertig) {
 
 function beschaeftigt(on) {
   arbeitet = on;
+
+  if (on) wartenAus();
   show($('busy'), on);
   if (on && stream) stopCam();
   abrSummeZeichnen();
@@ -1185,13 +1162,15 @@ $('photo').onchange = function (ev) {
   var f = ev.target.files && ev.target.files[0];
   ev.target.value = '';
   if (!f) return;
-  hinweis('reading');
+  warten('reading');
   var img = new Image();
   img.onload = function () {
     new ZXing.BrowserMultiFormatReader(hints()).decodeFromImageElement(img)
-      .then(function (r) { URL.revokeObjectURL(img.src); hinweisAus(); onScan(r.getText()); })
+      .then(function (r) { URL.revokeObjectURL(img.src); wartenAus(); onScan(r.getText()); })
       .catch(function () { URL.revokeObjectURL(img.src); flashT('bad', 'noRead'); });
   };
+
+  img.onerror = function () { URL.revokeObjectURL(img.src); flashT('bad', 'noRead'); };
   img.src = URL.createObjectURL(f);
 };
 
@@ -1260,7 +1239,8 @@ Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (
     if (arbeitet) return;
     modusSetzen(b.dataset.mode);
     hinweis(mode === 'ueb' ? 'tabUeb' : 'tabAbr');
-    laden(true);
+
+    if (stand) laden(true, true); else laden(true);
   };
 });
 
@@ -1278,11 +1258,11 @@ $('btnLaden').onclick = function () {
   var b = $('btnLaden');
   laedt = true;
   b.disabled = true;
-  b.innerHTML = SPINNER;
+
+  warten('laedt');
   laden().then(function (ok) {
     laedt = false;
     b.disabled = false;
-    b.textContent = t('reload');
     if (ok) flashT('ok', 'reload');
     autoPlanen();
   });
@@ -1312,7 +1292,7 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
 window.addEventListener('offline', function () { setNet(false); });
 
-var BUILD = '5cea415883df';
+var BUILD = '221cf09f8ec5';
 var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
 var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
 
@@ -1420,8 +1400,6 @@ function boot() {
 
   var neu = ls(K.neu);
   if (neu) { ls(K.neu, ''); if (neu === BUILD) meldung = { kind:'ok', key:'updated', a:'', b:'', bKey:'' }; }
-
-  if (!stand) ersterLauf = true;
   kopfZeigen();
   rolleRichten();
   applyLang();
@@ -1430,7 +1408,7 @@ function boot() {
     kopfZeigen();
     rolleRichten();
     return laden();
-  }).then(function () { ersterLaufAus(); autoPlanen(); });
+  }).then(function () { ladenFertig(); autoPlanen(); });
 }
 
 lang = ls(K.lang) || ((navigator.language || '').slice(0, 2) === 'zh' ? 'zh' : 'de');
