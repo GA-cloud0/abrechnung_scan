@@ -549,6 +549,12 @@ function hinweis(key) {
   paint();
 }
 
+function hinweisAus() {
+  if (meldung.kind !== 'laden') return;
+  meldung = { kind:'', key:'ready', a:'', b:'', bKey:'' };
+  paint();
+}
+
 var SPINNER = '<span class="spin"></span>';
 var pairBusy = false, laedt = false;
 
@@ -586,17 +592,21 @@ function netzZeigen() {
   if (laufend > 0) el.innerHTML = SPINNER;
   else el.textContent = netzOk ? '●' : '○';
 }
-function netz(p) {
+
+function netz(p, leise) {
+  if (leise) {
+    return p.then(function (d) { setNet(true); return d; }, function (e) { setNet(false); throw e; });
+  }
   laufend++;
   netzZeigen();
   return p.then(function (d) { laufend--; setNet(true); return d; },
                 function (e) { laufend--; setNet(false); throw e; });
 }
 
-function apiGet(action, params) {
+function apiGet(action, params, leise) {
   var p = new URLSearchParams(Object.assign({ action:action, tok:cfg.tok }, params || {}));
   return netz(mitFrist(fetch(cfg.api + (cfg.api.indexOf('?') < 0 ? '?' : '&') + p.toString())
-    .then(function (r) { return r.json(); }), 20000)).then(guard);
+    .then(function (r) { return r.json(); }), 20000), leise).then(guard);
 }
 
 function apiPost(action, body) {
@@ -645,20 +655,18 @@ function istFiliale() { return cfg.rolle === '门店'; }
 
 var ersterLauf = false;
 function ersterLaufAus() {
-  if (!ersterLauf) return;
-  ersterLauf = false;
-  zeichnen();
-  if (meldung.kind === 'laden' && meldung.key === 'laedt') {
-    meldung = { kind:'', key:'ready', a:'', b:'', bKey:'' };
-    paint();
+  if (ersterLauf) {
+    ersterLauf = false;
+    zeichnen();
   }
+  if (meldung.kind === 'laden' && meldung.key === 'laedt') hinweisAus();
 }
 function laden(still, kurz) {
   if (!cfg.tok || !istFiliale()) return Promise.resolve(false);
   var p = kurz && stand && stand.nr ? { nr:stand.nr, heute:stand.heute } : {};
   if (!stand && !ersterLauf) { ersterLauf = true; zeichnen(); }
   var fertig = ersterLaufAus;
-  return apiGet('stand', p).then(function (d) {
+  return apiGet('stand', p, !!kurz).then(function (d) {
     fertig();
     if (!d || !d.ok) { if (!still) fehlerZeigen(d); return false; }
     if (d.sek !== undefined) syncSek = Number(d.sek) || 0;
@@ -790,6 +798,7 @@ function abrScan(code) {
   hinweis('suche');
   apiGet('beutel', { q:code }).then(function (d) {
     sucht = false;
+    hinweisAus();
     if (!d || !d.ok) { fehlerZeigen(d); return; }
     if (!d.found) {
       if (d.gs1 === false) { flashT('bad', 'ungueltig', kurz); return; }
@@ -927,6 +936,7 @@ function uebScan(code) {
   hinweis('suche');
   apiGet('beutel', { q:code }).then(function (d) {
     sucht = false;
+    hinweisAus();
     if (!d || !d.ok) { fehlerZeigen(d); return; }
     if (d.found && d.eigen && d.status === '已交出') { uebZurueckFragen(d); return; }
     if (d.found && d.eigen && d.status === '保险柜') {
@@ -1179,7 +1189,7 @@ $('photo').onchange = function (ev) {
   var img = new Image();
   img.onload = function () {
     new ZXing.BrowserMultiFormatReader(hints()).decodeFromImageElement(img)
-      .then(function (r) { URL.revokeObjectURL(img.src); onScan(r.getText()); })
+      .then(function (r) { URL.revokeObjectURL(img.src); hinweisAus(); onScan(r.getText()); })
       .catch(function () { URL.revokeObjectURL(img.src); flashT('bad', 'noRead'); });
   };
   img.src = URL.createObjectURL(f);
@@ -1302,7 +1312,7 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
 window.addEventListener('offline', function () { setNet(false); });
 
-var BUILD = '4316f90b2348';
+var BUILD = '5cea415883df';
 var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
 var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
 
