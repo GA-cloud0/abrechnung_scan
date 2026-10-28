@@ -30,6 +30,8 @@
   .tag { font-size:12px; padding:3px 8px; border-radius:99px; background:rgba(255,255,255,.18);
     color:#fff; max-width:46vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .tag:empty { display:none; }
+  .tag.on { background:var(--hell); color:var(--kopf); font-weight:700; }
+  .tag.off { background:var(--rot); color:#fff; font-weight:700; }
   #lang { font-size:12px; font-weight:700; color:#fff; background:rgba(255,255,255,.18);
     border:0; border-radius:99px; padding:5px 10px; }
   #gear { border:0; background:transparent; color:#fff; font-size:18px; padding:2px 4px; }
@@ -133,6 +135,7 @@
   <img id="logo" src="logo.png" alt="go asia">
   <span class="sp"></span>
   <span id="who" class="tag"></span>
+  <span id="net" class="tag"></span>
   <button id="lang">DE</button>
   <button id="gear">&#9881;</button>
 </header>
@@ -253,7 +256,7 @@ var TXT = {
         abrDone:'Gebucht', leerDone:'Kein Geld gebucht', uebDone:'Übergabe gebucht', zurueckDone:'Zurückgenommen',
         errDatum:'Datum geändert', errStart:'Datum ungültig', errExists:'Schon erfasst', errBetrag:'Betrag ungültig',
         errFoto:'Foto fehlt', errLeer:'Kein Beutel', errTresor:'Nicht im Tresor',
-        errAbgeholt:'Schon übergeben', notFound:'Nicht gefunden' },
+        errAbgeholt:'Schon übergeben', notFound:'Nicht gefunden', updated:'Neue Fassung geladen' },
   zh: { title:'go asia 做账记录', tabAbr:'做账', tabUeb:'交袋',
         cam:'扫描', camOff:'停止', photo:'拍照取码', reload:'刷新',
         save:'确定', code:'配对码', unpair:'解除', cancel:'取消',
@@ -273,12 +276,12 @@ var TXT = {
         abrDone:'已提交', leerDone:'已记无钱袋', uebDone:'已交袋', zurueckDone:'已撤回',
         errDatum:'日期已变', errStart:'日期无效', errExists:'条码已登记', errBetrag:'金额无效',
         errFoto:'缺少照片', errLeer:'没有钱袋', errTresor:'不在保险柜',
-        errAbgeholt:'已有袋交出', notFound:'未找到' }
+        errAbgeholt:'已有袋交出', notFound:'未找到', updated:'已更新到新版本' }
 };
 var lang = 'de';
 function t(k) { return (TXT[lang] && TXT[lang][k]) || TXT.de[k] || k; }
 
-var K = { cfg:'tresor.cfg', lang:'tresor.lang' };
+var K = { cfg:'tresor.cfg', lang:'tresor.lang', versuch:'tresor.versuch', neu:'tresor.neu' };
 function ls(k, v) {
   try {
     if (v === undefined) { var s = localStorage.getItem(k); return s ? JSON.parse(s) : null; }
@@ -502,16 +505,25 @@ function mitFrist(p, ms) {
   });
 }
 
+function setNet(on) {
+  var el = $('net');
+  el.textContent = on ? '●' : '○';
+  el.className = 'tag ' + (on ? 'on' : 'off');
+}
+function netz(p) {
+  return p.then(function (d) { setNet(true); return d; }, function (e) { setNet(false); throw e; });
+}
+
 function apiGet(action, params) {
   var p = new URLSearchParams(Object.assign({ action:action, tok:cfg.tok }, params || {}));
-  return mitFrist(fetch(cfg.api + (cfg.api.indexOf('?') < 0 ? '?' : '&') + p.toString())
-    .then(function (r) { return r.json(); }), 20000).then(guard);
+  return netz(mitFrist(fetch(cfg.api + (cfg.api.indexOf('?') < 0 ? '?' : '&') + p.toString())
+    .then(function (r) { return r.json(); }), 20000)).then(guard);
 }
 
 function apiPost(action, body) {
-  return mitFrist(fetch(cfg.api, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=UTF-8' },
+  return netz(mitFrist(fetch(cfg.api, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=UTF-8' },
     body:JSON.stringify(Object.assign({ action:action, tok:cfg.tok }, body || {})) })
-    .then(function (r) { return r.json(); }), 90000).then(guard);
+    .then(function (r) { return r.json(); }), 90000)).then(guard);
 }
 
 function guard(d) {
@@ -524,6 +536,8 @@ function guard(d) {
 }
 
 var stand = null, geladen = 0;
+
+var syncSek = 30, autoUhr = 0;
 var mode = 'abr';
 var arbeitet = false, sucht = false;
 
@@ -550,10 +564,13 @@ function fehlerZeigen(d) {
 
 function istFiliale() { return cfg.rolle === '门店'; }
 
-function laden(still) {
+function laden(still, kurz) {
   if (!cfg.tok || !istFiliale()) return Promise.resolve(false);
-  return apiGet('stand').then(function (d) {
+  var p = kurz && stand && stand.nr ? { nr:stand.nr, heute:stand.heute } : {};
+  return apiGet('stand', p).then(function (d) {
     if (!d || !d.ok) { if (!still) fehlerZeigen(d); return false; }
+    if (d.sek !== undefined) syncSek = Number(d.sek) || 0;
+    if (d.same) { geladen = Date.now(); return true; }
     standSetzen(d);
     return true;
   }, function () {
@@ -1146,13 +1163,69 @@ $('btnLaden').onclick = function () {
     b.disabled = false;
     b.textContent = t('reload');
     if (ok) flashT('ok', 'reload');
+    autoPlanen();
   });
 };
 $('lang').onclick = function () { lang = lang === 'zh' ? 'de' : 'zh'; ls(K.lang, lang); applyLang(); };
 
+function autoPlanen(ms) {
+  if (autoUhr) clearTimeout(autoUhr);
+  autoUhr = 0;
+  if (!(syncSek > 0)) return;
+  autoUhr = setTimeout(autoTick, ms === undefined ? syncSek * 1000 : ms);
+}
+function autoTick() {
+  autoUhr = 0;
+  var a = document.activeElement;
+  var still = !cfg.tok || !istFiliale() || !stand || document.hidden || navigator.onLine === false ||
+              arbeitet || laedt || sucht || dialogOffen || (!!a && a.tagName === 'INPUT');
+  if (still) { autoPlanen(); return; }
+  laden(true, true).then(function () { autoPlanen(); });
+}
+
 document.addEventListener('visibilitychange', function () {
-  if (document.visibilityState === 'visible' && cfg.tok && !arbeitet && Date.now() - geladen > 60000) laden(true);
+  if (document.hidden) return;
+  autoPlanen(500);
+  if (Date.now() - versionZuletzt > 60000) versionPruefen();
 });
+window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
+window.addEventListener('offline', function () { setNet(false); });
+
+var BUILD = '9c4adefab824';
+var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
+var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
+
+function versionPruefen() {
+  if (!/^[0-9a-f]{8,}$/.test(BUILD) || navigator.onLine === false || document.hidden) return Promise.resolve();
+  versionZuletzt = Date.now();
+  return mitFrist(fetch('version.txt?' + Date.now(), { cache:'no-store' })
+    .then(function (r) { return r.ok ? r.text() : ''; }), 8000)
+    .then(function (text) {
+      var neu = String(text || '').trim();
+      if (/^[0-9a-f]{8,}$/.test(neu) && neu !== BUILD) { versionZiel = neu; neuLaden(); }
+    }).catch(function () {});
+}
+function versionPlanen() {
+  if (versionUhr) clearTimeout(versionUhr);
+  versionUhr = setTimeout(function () { versionUhr = 0; versionPruefen().then(versionPlanen); }, VERSION_TAKT);
+}
+
+function ruhig() {
+  return !arbeitet && !sucht && !laedt && !pairBusy && !stream && !dialogOffen &&
+         ($('setup').classList.contains('hide') || !$('cfgCode').value) &&
+         !abr.foto && !abr.beutel.length && !ueb.foto && !ueb.haken.length;
+}
+function neuLaden() {
+  if (neuUhr) { clearTimeout(neuUhr); neuUhr = 0; }
+  if (!versionZiel) return;
+
+  var merk = ls(K.versuch) || {};
+  if (merk.ziel === versionZiel && Date.now() - (Number(merk.at) || 0) < VERSION_FRIST) return;
+  if (!ruhig() || document.hidden || navigator.onLine === false) { neuUhr = setTimeout(neuLaden, 3000); return; }
+  ls(K.versuch, { ziel:versionZiel, at:Date.now() });
+  ls(K.neu, versionZiel);
+  location.reload();
+}
 
 function openSetup(on) {
   if (on && stream) stopCam();
@@ -1223,6 +1296,9 @@ function werBinIch() {
 function boot() {
   openSetup(false);
   meldung = { kind:'', key:'ready', a:'', b:'', bKey:'' };
+
+  var neu = ls(K.neu);
+  if (neu) { ls(K.neu, ''); if (neu === BUILD) meldung = { kind:'ok', key:'updated', a:'', b:'', bKey:'' }; }
   kopfZeigen();
   rolleRichten();
   applyLang();
@@ -1231,16 +1307,18 @@ function boot() {
     kopfZeigen();
     rolleRichten();
     return laden();
-  });
+  }).then(function () { autoPlanen(); });
 }
 
 lang = ls(K.lang) || ((navigator.language || '').slice(0, 2) === 'zh' ? 'zh' : 'de');
+setNet(navigator.onLine !== false);
 if (cfg.api && cfg.tok) {
   boot();
 } else {
   openSetup(true);
   applyLang();
 }
+versionPlanen();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
 })();
 </script>

@@ -1,5 +1,5 @@
 var PREFIX = 'tresor-scan-';
-var CACHE = PREFIX + 'v1';
+var CACHE = PREFIX + 'v2';
 var FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg', './logo.png',
              'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js'];
 
@@ -32,6 +32,8 @@ self.addEventListener('fetch', function (e) {
   var url = e.request.url;
   if (e.request.method !== 'GET') return;
   if (url.indexOf('script.google.com') >= 0 || url.indexOf('googleusercontent.com') >= 0) return;
+
+  if (/\/version\.txt$/.test(new URL(url).pathname)) return;
 
   if (istSeite(e.request)) {
     if (!istScanseite(url)) return;
