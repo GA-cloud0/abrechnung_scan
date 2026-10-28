@@ -30,6 +30,8 @@
   .tag { font-size:12px; padding:3px 8px; border-radius:99px; background:rgba(255,255,255,.18);
     color:#fff; max-width:46vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .tag:empty { display:none; }
+  #who { min-width:0; }
+  #net { flex:0 0 auto; max-width:none; }
   .tag.on { background:var(--hell); color:var(--kopf); font-weight:700; }
   .tag.off { background:var(--rot); color:#fff; font-weight:700; }
   #lang { font-size:12px; font-weight:700; color:#fff; background:rgba(255,255,255,.18);
@@ -84,10 +86,45 @@
   .zuletzt button { border:1px solid var(--line); background:var(--panel); color:var(--text);
     border-radius:8px; font-size:17px; padding:1px 12px; }
 
-  .foto { display:flex; align-items:center; gap:10px; margin:8px 0; }
-  .foto img { height:52px; width:52px; object-fit:cover; border-radius:8px; border:2px solid var(--ok);
-    flex:0 0 auto; }
-  .platz { margin:8px 0 0; }
+  .platz { margin:10px 0 0; }
+
+  .karte { background:var(--bg); border:1px solid var(--line); border-radius:12px; overflow:hidden;
+    margin-top:10px; }
+  .karte:empty { display:none; }
+  .schritt { display:flex; align-items:center; gap:12px; width:100%; min-height:66px; padding:10px 12px;
+    border:0; border-bottom:1px solid var(--line); background:var(--bg); color:var(--text);
+    font:inherit; text-align:left; }
+  .schritt:last-child { border-bottom:0; }
+  .schritt.da { background:#eef6f0; }
+  .schritt .kreis { flex:0 0 auto; width:30px; height:30px; border-radius:50%; border:2px dashed var(--accent);
+    color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; }
+  .schritt .kreis::before { content:attr(data-n); }
+  .schritt.da .kreis { border:0; background:var(--ok); color:#fff; }
+  .schritt.da .kreis::before { content:'\2713'; font-size:18px; }
+  .schritt.laeuft .kreis { border:3px solid rgba(31,58,95,.2); border-top-color:var(--accent);
+    animation:spin .8s linear infinite; }
+  .schritt.laeuft .kreis::before { content:''; }
+  .schritt .text { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+  .schritt .text b { font-size:16px; }
+  .schritt .text small { font-size:13px; font-weight:700; color:var(--accent); }
+  .schritt .text small:empty { display:none; }
+  .schritt.da .text small { color:var(--ok); }
+  .schritt img { flex:0 0 auto; height:46px; width:46px; object-fit:cover; border-radius:8px;
+    border:2px solid var(--ok); }
+  .schritt .kam { flex:0 0 auto; width:44px; height:44px; border-radius:10px; background:var(--accent);
+    color:#fff; display:flex; align-items:center; justify-content:center; }
+  .schritt.da .kam { display:none; }
+
+  .liste .row { margin:0; border:0; border-bottom:1px solid var(--line); border-radius:0;
+    background:var(--bg); padding:11px 12px; }
+  .liste .row:last-child { border-bottom:0; }
+  .liste .row.an { background:#eef6f0; border-color:var(--line); }
+  .liste .leer { padding:18px 0; }
+  .listenkopf { display:flex; justify-content:space-between; align-items:baseline; gap:8px;
+    margin:16px 2px 0; font-size:15px; font-weight:800; }
+  .listenkopf span:last-child { color:var(--dim); font-size:14px; font-weight:700; }
+
+  .abseits { margin-top:22px; padding-top:16px; border-top:1px dashed var(--line); }
 
   .row { display:flex; align-items:center; gap:8px; padding:9px 10px; background:var(--panel);
     border:1px solid var(--line); border-radius:9px; margin-top:6px; font-size:15px; }
@@ -103,8 +140,9 @@
     font-size:18px; font-weight:700; }
   .row input.betrag.falsch { border-color:var(--bad); color:var(--bad); }
   .row.an { border-color:var(--ok); background:#e7f2eb; }
-  .row .haken { width:22px; text-align:center; font-size:19px; font-weight:800; color:var(--line); }
-  .row.an .haken { color:var(--ok); }
+  .row .haken { flex:0 0 auto; width:26px; height:26px; border-radius:50%; border:2px solid var(--line);
+    color:transparent; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; }
+  .row.an .haken { background:var(--ok); border-color:var(--ok); color:#fff; }
   .summe { text-align:right; font-weight:800; font-size:17px; padding:8px 4px 2px; }
   .summe:empty { display:none; }
   .leer { text-align:center; color:var(--dim); padding:14px 0; }
@@ -172,29 +210,47 @@
         <input id="startDatum" type="date">
       </div>
       <div class="zuletzt"><span id="zuletztText"></span><button id="btnLeerZurueck" class="hide" type="button">&#8630;</button></div>
-      <div id="abrArbeit" class="foto">
-        <button id="btnFotoAbr" class="b g" data-t="fotoAbr">Foto Abrechnung</button>
-        <img id="imgAbr" class="hide" alt="">
+
+      <div id="abrArbeit" class="karte">
+        <button id="btnFotoAbr" class="schritt" type="button">
+          <span class="kreis" data-n="1"></span>
+          <span class="text"><b data-t="fotoAbr">Foto Abrechnung</b><small id="sFotoAbr"></small></span>
+          <img id="imgAbr" class="hide" alt="">
+          <span class="kam"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/></svg></span>
+        </button>
+        <div id="schrittAbr" class="schritt">
+          <span class="kreis" data-n="2"></span>
+          <span class="text"><b data-t="schrittBeutel">Beutel</b><small id="abrSumme"></small><small id="tippAbr" data-t="scanTipp">Beutel scannen</small></span>
+        </div>
       </div>
       <div id="platzAbr" class="platz"></div>
-      <div id="abrListe"></div>
-      <div id="abrSumme" class="summe"></div>
-      <div id="abrKnoepfe" class="two" style="margin-top:10px">
-        <button id="btnLeer" class="b g" data-t="leerTag">Kein Geld</button>
-        <button id="btnBuchen" class="b" data-t="buchen">Buchen</button>
+      <div id="abrListe" class="karte liste"></div>
+      <div id="abrKnoepfe" style="margin-top:12px">
+        <button id="btnBuchen" class="b w" data-t="buchen">Buchen</button>
+      </div>
+      <div id="leerBox" class="abseits">
+        <button id="btnLeer" class="b rot w" data-t="leerTag">Kein Geld</button>
       </div>
     </section>
 
     <section id="mUeb" class="hide">
       <div id="platzUeb" class="platz"></div>
-      <div id="tresorListe"></div>
-      <div id="uebSumme" class="summe"></div>
+      <div class="listenkopf"><span data-t="tresor">Tresor</span><span id="tresorZahl"></span></div>
+      <div id="tresorListe" class="karte liste"></div>
       <div id="uebArbeit">
-        <div class="foto">
-          <button id="btnFotoUeb" class="b g" data-t="fotoUeb">Foto Beleg</button>
-          <img id="imgUeb" class="hide" alt="">
+        <div class="karte">
+          <div id="schrittUeb" class="schritt">
+            <span class="kreis" data-n="1"></span>
+            <span class="text"><b data-t="schrittBeutel">Beutel</b><small id="uebSumme"></small><small id="tippUeb" data-t="scanTipp">Beutel scannen</small></span>
+          </div>
+          <button id="btnFotoUeb" class="schritt" type="button">
+            <span class="kreis" data-n="2"></span>
+            <span class="text"><b data-t="fotoUeb">Foto Beleg</b><small id="sFotoUeb"></small></span>
+            <img id="imgUeb" class="hide" alt="">
+            <span class="kam"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/></svg></span>
+          </button>
         </div>
-        <button id="btnUebBuchen" class="b w" data-t="uebBuchen">Übergabe buchen</button>
+        <button id="btnUebBuchen" class="b w" style="margin-top:12px" data-t="uebBuchen">Übergabe buchen</button>
       </div>
     </section>
 
@@ -256,7 +312,9 @@ var TXT = {
         abrDone:'Gebucht', leerDone:'Kein Geld gebucht', uebDone:'Übergabe gebucht', zurueckDone:'Zurückgenommen',
         errDatum:'Datum geändert', errStart:'Datum ungültig', errExists:'Schon erfasst', errBetrag:'Betrag ungültig',
         errFoto:'Foto fehlt', errLeer:'Kein Beutel', errTresor:'Nicht im Tresor',
-        errAbgeholt:'Schon übergeben', notFound:'Nicht gefunden', updated:'Neue Fassung geladen' },
+        errAbgeholt:'Schon übergeben', notFound:'Nicht gefunden', updated:'Neue Fassung geladen',
+        fotoTipp:'Antippen', fotoDa:'Aufgenommen', scanTipp:'Beutel scannen', schrittBeutel:'Beutel',
+        tresor:'Tresor' },
   zh: { title:'go asia 做账记录', tabAbr:'做账', tabUeb:'交袋',
         cam:'扫描', camOff:'停止', photo:'拍照取码', reload:'刷新',
         save:'确定', code:'配对码', unpair:'解除', cancel:'取消',
@@ -276,7 +334,9 @@ var TXT = {
         abrDone:'已提交', leerDone:'已记无钱袋', uebDone:'已交袋', zurueckDone:'已撤回',
         errDatum:'日期已变', errStart:'日期无效', errExists:'条码已登记', errBetrag:'金额无效',
         errFoto:'缺少照片', errLeer:'没有钱袋', errTresor:'不在保险柜',
-        errAbgeholt:'已有袋交出', notFound:'未找到', updated:'已更新到新版本' }
+        errAbgeholt:'已有袋交出', notFound:'未找到', updated:'已更新到新版本',
+        fotoTipp:'点击拍照', fotoDa:'已拍照', scanTipp:'请扫描钱袋', schrittBeutel:'钱袋',
+        tresor:'保险柜' }
 };
 var lang = 'de';
 function t(k) { return (TXT[lang] && TXT[lang][k]) || TXT.de[k] || k; }
@@ -594,14 +654,15 @@ function imTresor(barcode) {
 
 function kopfZeigen() {
   var f = cfg.filiale;
-  $('who').textContent = f && f.key ? f.key + (f.name ? ' ' + f.name : '') : (cfg.who || '');
+  $('who').textContent = f && (f.name || f.key) || cfg.who || '';
 }
 
 function zeichnen() { abrZeichnen(); uebZeichnen(); }
 
 var fotoZaehler = 0;
-function fotoZeichnen(knopf, bild, o) {
+function fotoZeichnen(knopf, bild, o, hinweis) {
   knopf.classList.toggle('da', !!o.foto);
+  hinweis.textContent = t(o.foto ? 'fotoDa' : 'fotoTipp');
   show(bild, !!o.foto);
   var v = o.foto ? String(o.fotoNr) : '';
   if (bild.dataset.v === v) return;
@@ -649,7 +710,7 @@ function abrZeichnen() {
   show($('abrListe'), offen);
   show($('abrSumme'), offen);
   show($('abrKnoepfe'), offen);
-  fotoZeichnen($('btnFotoAbr'), $('imgAbr'), abr);
+  fotoZeichnen($('btnFotoAbr'), $('imgAbr'), abr, $('sFotoAbr'));
   abrListeZeichnen();
   abrSummeZeichnen();
 }
@@ -670,9 +731,13 @@ function abrSummeZeichnen() {
   var werte = abrBetraege(), summe = 0, alle = werte.length > 0;
   werte.forEach(function (w) { if (w === null) alle = false; else summe += w; });
   $('abrSumme').textContent = werte.length ? werte.length + ' ' + t('stk') + ' · ' + betragText(runde(summe)) : '';
+  show($('tippAbr'), !werte.length);
+  $('schrittAbr').classList.toggle('da', alle);
   var offen = !!stand && !abrFertig();
   $('btnBuchen').disabled = arbeitet || !offen || !abr.foto || !alle;
   $('btnLeer').disabled = arbeitet || !offen || abr.beutel.length > 0;
+
+  show($('leerBox'), offen && !abr.beutel.length);
 }
 
 function fokusBetrag(i) {
@@ -792,7 +857,7 @@ function uebZeichnen() {
   else if (!liste.length) el.innerHTML = '<div class="leer">' + esc(t('tresorLeer')) + '</div>';
   else el.innerHTML = liste.map(function (b) {
     var an = istAngehakt(b.barcode);
-    return '<div class="row' + (an ? ' an' : '') + '"><span class="haken">' + (an ? '&#10003;' : '&#9675;') + '</span>' +
+    return '<div class="row' + (an ? ' an' : '') + '"><span class="haken">&#10003;</span>' +
       '<span class="g"><b>' + esc(datumText(b.datum)) + '</b><div>' + nummerHtml(b.barcode) + '</div></span>' +
       '<span class="eur">' + esc(betragText(b.betrag)) + '</span>' +
       (an ? '<span class="x" data-weg="' + esc(b.barcode) + '">&times;</span>' : '') + '</div>';
@@ -800,8 +865,12 @@ function uebZeichnen() {
   var wahl = uebAuswahl();
   var summe = runde(wahl.reduce(function (a, b) { return a + Number(b.betrag || 0); }, 0));
   $('uebSumme').textContent = wahl.length ? t('gescannt') + ' ' + wahl.length + ' ' + t('stk') + ' · ' + betragText(summe) : '';
+  show($('tippUeb'), !wahl.length);
+  $('schrittUeb').classList.toggle('da', wahl.length > 0);
+  var alle = runde(liste.reduce(function (a, b) { return a + Number(b.betrag || 0); }, 0));
+  $('tresorZahl').textContent = liste.length ? liste.length + ' ' + t('stk') + ' · ' + betragText(alle) : '';
   show($('uebArbeit'), !!stand);
-  fotoZeichnen($('btnFotoUeb'), $('imgUeb'), ueb);
+  fotoZeichnen($('btnFotoUeb'), $('imgUeb'), ueb, $('sFotoUeb'));
   $('btnUebBuchen').disabled = arbeitet || !wahl.length || !ueb.foto;
 }
 
@@ -945,21 +1014,26 @@ function fotoKnopf(knopf, eingabe, bild, ziel) {
     var datei = ev.target.files && ev.target.files[0];
     ev.target.value = '';
     if (!datei) return;
-    knopf.innerHTML = SPINNER;
+
+    knopf.classList.add('laeuft');
     fotoLesen(datei).then(function (r) {
       var o = ziel();
       o.foto = r.foto;
       o.vorschau = r.vorschau;
       o.fotoNr = ++fotoZaehler;
       o.rid = '';
-      knopf.textContent = t(knopf.dataset.t);
+      knopf.classList.remove('laeuft');
       zeichnen();
     }, function () {
-      knopf.textContent = t(knopf.dataset.t);
+      knopf.classList.remove('laeuft');
       flashT('bad', 'fotoFehler');
     });
   };
 }
+
+$('schrittAbr').onclick = $('schrittUeb').onclick = function () {
+  if (!stream && !arbeitet) $('btnCam').click();
+};
 fotoKnopf($('btnFotoAbr'), $('fotoAbr'), $('imgAbr'), function () { return abr; });
 fotoKnopf($('btnFotoUeb'), $('fotoUeb'), $('imgUeb'), function () { return ueb; });
 
@@ -1191,7 +1265,7 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
 window.addEventListener('offline', function () { setNet(false); });
 
-var BUILD = '9c4adefab824';
+var BUILD = '1f7f9f98d441';
 var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
 var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
 
