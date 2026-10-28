@@ -159,6 +159,9 @@
 
   .spin.dunkel { border-color:rgba(31,58,95,.2); border-top-color:var(--accent); }
 
+  #sperre { position:fixed; inset:0; z-index:45; background:transparent; }
+  #app.gesperrt nav, #app.gesperrt main { opacity:.45; }
+
   #dlg { position:fixed; inset:0; z-index:30; background:rgba(10,20,35,.55); display:flex;
     align-items:center; justify-content:center; padding:14px; }
   #dlg .karte { background:var(--bg); border-radius:14px; padding:14px; width:100%; max-width:440px;
@@ -288,6 +291,7 @@
     </div>
   </div>
 </div>
+<div id="sperre" class="hide"></div>
 <div id="busy" class="hide"><span class="spin gross"></span><div data-t="sendet">Wird gebucht</div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js">
@@ -521,6 +525,8 @@ var meldung = { kind:'', key:'ready', a:'', b:'', bKey:'' };
 function paint() {
   var el = $('flash'), laeuft = meldung.kind === 'laden';
   el.className = laeuft ? '' : meldung.kind || '';
+  show($('sperre'), laeuft);
+  $('app').classList.toggle('gesperrt', laeuft);
   var a = meldung.key ? t(meldung.key) : meldung.a;
   var b = meldung.bKey ? t(meldung.bKey) : meldung.b;
   el.innerHTML = '<div class="a">' + (laeuft ? '<span class="spin dunkel"></span> ' : '') + esc(a) + '</div>' +
@@ -544,9 +550,16 @@ function hinweis(key) {
   paint();
 }
 
+var WARTEN_MAX = 45000, wartenUhr = 0;
 function warten(key) {
+  if (stream) stopCam();
   meldung = { kind:'laden', key:key, a:'', b:'', bKey:'' };
   paint();
+  if (wartenUhr) clearTimeout(wartenUhr);
+  wartenUhr = setTimeout(function () {
+    wartenUhr = 0;
+    if (meldung.kind === 'laden') flashT('bad', 'offline');
+  }, WARTEN_MAX);
 }
 
 function wartenAus() {
@@ -1067,7 +1080,7 @@ fotoKnopf($('btnFotoUeb'), $('fotoUeb'), $('imgUeb'), function () { return ueb; 
 var lastText = '', lastAt = 0;
 
 function onScan(text) {
-  if (dialogOffen || arbeitet || sucht || !istFiliale()) return;
+  if (dialogOffen || arbeitet || sucht || meldung.kind === 'laden' || !istFiliale()) return;
   var now = Date.now();
 
   if (text === lastText && now - lastAt < 2500) { lastAt = now; return; }
@@ -1168,9 +1181,15 @@ $('photo').onchange = function (ev) {
   warten('reading');
   var img = new Image();
   img.onload = function () {
-    new ZXing.BrowserMultiFormatReader(hints()).decodeFromImageElement(img)
-      .then(function (r) { URL.revokeObjectURL(img.src); wartenAus(); onScan(r.getText()); })
-      .catch(function () { URL.revokeObjectURL(img.src); flashT('bad', 'noRead'); });
+    try {
+      new ZXing.BrowserMultiFormatReader(hints()).decodeFromImageElement(img)
+        .then(function (r) { URL.revokeObjectURL(img.src); wartenAus(); onScan(r.getText()); })
+        .catch(function () { URL.revokeObjectURL(img.src); flashT('bad', 'noRead'); });
+    } catch (e) {
+
+      URL.revokeObjectURL(img.src);
+      flashT('bad', 'noRead');
+    }
   };
 
   img.onerror = function () { URL.revokeObjectURL(img.src); flashT('bad', 'noRead'); };
@@ -1266,6 +1285,7 @@ $('btnLaden').onclick = function () {
   laden().then(function (ok) {
     laedt = false;
     b.disabled = false;
+    ladenFertig();
     if (ok) flashT('ok', 'reload');
     autoPlanen();
   });
@@ -1295,7 +1315,7 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
 window.addEventListener('offline', function () { setNet(false); });
 
-var BUILD = '43ea78ce4dcf';
+var BUILD = '0ad8f6c3d355';
 var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
 var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
 
@@ -1399,7 +1419,7 @@ function werBinIch() {
 
 function boot() {
   openSetup(false);
-  meldung = { kind:'laden', key:'laedt', a:'', b:'', bKey:'' };
+  warten('laedt');
 
   var neu = ls(K.neu);
   nachDemLaden = null;
