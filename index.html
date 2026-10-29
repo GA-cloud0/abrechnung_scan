@@ -129,6 +129,7 @@
   .row input.betrag { width:7.2em; flex:0 0 auto; margin:0; padding:9px 10px; text-align:right;
     font-size:18px; font-weight:700; }
   .row input.betrag.falsch { border-color:var(--bad); color:var(--bad); }
+  .row .eurz { flex:0 0 auto; font-size:17px; font-weight:700; color:var(--dim); margin-left:-2px; }
   .summe { text-align:right; font-weight:800; font-size:17px; padding:8px 4px 2px; }
   .summe:empty { display:none; }
   .leer { text-align:center; color:var(--dim); padding:14px 0; }
@@ -437,8 +438,10 @@ function betragLesen(text) {
   return n > 0 && n < 1000000 ? n : null;
 }
 
-var ABSTAND = ' ';
-function beutelSumme(anzahl, betrag) { return anzahl + ' ' + t('stk') + ABSTAND + betragText(betrag); }
+var ABSTAND = '\u2003';
+function beutelSumme(anzahl, betrag) { return anzahl + ' ' + t('stk') + ABSTAND + euro(betrag); }
+
+function euro(x) { var s = betragText(x); return s ? s + '\u00a0€' : ''; }
 
 function betragText(x) {
   var n = Number(x);
@@ -741,6 +744,7 @@ function abrListeZeichnen() {
     return '<div class="row"><span class="g">' + nummerHtml(b.barcode) + '</span>' +
       '<input class="betrag' + (falsch ? ' falsch' : '') + '" type="text" inputmode="decimal" autocomplete="off"' +
       ' placeholder="0,00" data-i="' + i + '" value="' + esc(b.text) + '">' +
+      '<span class="eurz">€</span>' +
       '<span class="x" data-rm="' + i + '">&times;</span></div>';
   }).join('');
 }
@@ -795,7 +799,7 @@ function abrScan(code) {
 function beutelZeile(barcode, betrag, rechts) {
   return '<div class="row"><span class="g">' + nummerHtml(barcode) +
     (rechts ? '<div class="s">' + esc(rechts) + '</div>' : '') + '</span>' +
-    '<span class="eur">' + esc(betragText(betrag)) + '</span></div>';
+    '<span class="eur">' + esc(euro(betrag)) + '</span></div>';
 }
 function datumGross(datum) {
   return esc(datumText(datum)) + '<span class="wt">' + esc(wochentag(datum)) + '</span>';
@@ -877,7 +881,7 @@ function summeVon(liste) { return runde(liste.reduce(function (a, b) { return a 
 
 function tresorZeile(b, weg) {
   return '<div class="row"><span class="g"><b>' + esc(datumText(b.datum)) + '</b><div>' + nummerHtml(b.barcode) + '</div></span>' +
-    '<span class="eur">' + esc(betragText(b.betrag)) + '</span>' +
+    '<span class="eur">' + esc(euro(b.betrag)) + '</span>' +
     (weg ? '<span class="x" data-weg="' + esc(b.barcode) + '">&times;</span>' : '') + '</div>';
 }
 
@@ -909,7 +913,7 @@ function uebScan(code) {
     ueb.haken.push(b.barcode);
     ueb.rid = '';
     uebZeichnen();
-    flash('ok', betragText(b.betrag), datumText(b.datum) + '  ' + kurz);
+    flash('ok', euro(b.betrag), datumText(b.datum) + '  ' + kurz);
     return;
   }
   sucht = true;
@@ -932,13 +936,13 @@ function uebScan(code) {
 }
 
 function uebZurueckFragen(d) {
-  frage({ titel:t('uebZurueck'), gross:esc(betragText(d.betrag)),
+  frage({ titel:t('uebZurueck'), gross:esc(euro(d.betrag)),
           zeilen:['<div class="row"><span class="g">' + nummerHtml(d.barcode) +
                   '<div class="s">' + esc(datumText(d.datum)) + '</div></span></div>',
                   d.abholungAm ? '<div class="hint">' + esc(t('abgegeben') + ' ' + zeitText(d.abholungAm)) + '</div>' : ''],
           knopf:t('zurueck'), rot:true }, function () {
     schreiben('abholungZurueck', { barcode:d.barcode }, function () {
-      flash('ok', t('zurueckDone'), betragText(d.betrag) + '  ' + String(d.barcode).slice(-6));
+      flash('ok', t('zurueckDone'), euro(d.betrag) + '  ' + String(d.barcode).slice(-6));
     });
   });
 }
@@ -951,7 +955,7 @@ function uebBuchen() {
   var summe = summeVon(wahl);
 
   frage({ titel:t('tabUeb'),
-          gross:esc(betragText(summe)) + '<span class="wt">' + esc(codes.length + ' ' + t('stk')) + '</span>',
+          gross:esc(euro(summe)) + '<span class="wt">' + esc(codes.length + ' ' + t('stk')) + '</span>',
           zeilen:wahl.map(function (b) { return beutelZeile(b.barcode, b.betrag, datumText(b.datum)); }),
           summe:t('material') + ' ' + ueb.fotos.length + ' ' + t('stkFoto'),
           knopf:t('bestaetigen') }, function () {
@@ -1335,7 +1339,7 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
 window.addEventListener('offline', function () { setNet(false); });
 
-var BUILD = '8158f5ac67ee';
+var BUILD = '89fe08c565d7';
 var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
 var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
 
