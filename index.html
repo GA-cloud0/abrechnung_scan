@@ -52,6 +52,10 @@
     font-size:15px; font-weight:600; border-bottom:3px solid transparent; }
   nav button.sel { color:var(--text); border-bottom-color:var(--accent); }
 
+  #tabTresorZahl { display:inline-block; min-width:20px; padding:0 6px; border-radius:99px; font-size:12px;
+    line-height:18px; background:var(--panel); border:1px solid var(--line); color:var(--text); }
+  #tabTresorZahl:empty { display:none; }
+
   main { flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:10px; }
   .hide { display:none !important; }
 
@@ -105,7 +109,6 @@
   .liste .row { margin:0; border:0; border-bottom:1px solid var(--line); border-radius:0;
     background:var(--bg); padding:11px 12px; }
   .liste .row:last-child { border-bottom:0; }
-  .liste .row.an { background:#eef6f0; border-color:var(--line); }
   .liste .leer { padding:18px 0; }
   .listenkopf { display:flex; justify-content:space-between; align-items:baseline; gap:8px;
     margin:16px 2px 0; font-size:15px; font-weight:800; }
@@ -126,10 +129,6 @@
   .row input.betrag { width:7.2em; flex:0 0 auto; margin:0; padding:9px 10px; text-align:right;
     font-size:18px; font-weight:700; }
   .row input.betrag.falsch { border-color:var(--bad); color:var(--bad); }
-  .row.an { border-color:var(--ok); background:#e7f2eb; }
-  .row .haken { flex:0 0 auto; width:26px; height:26px; border-radius:50%; border:2px solid var(--line);
-    color:transparent; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; }
-  .row.an .haken { background:var(--ok); border-color:var(--ok); color:#fff; }
   .summe { text-align:right; font-weight:800; font-size:17px; padding:8px 4px 2px; }
   .summe:empty { display:none; }
   .leer { text-align:center; color:var(--dim); padding:14px 0; }
@@ -191,6 +190,7 @@
   <nav id="nav">
     <button data-mode="abr" class="sel" data-t="tabAbr">Abrechnung</button>
     <button data-mode="ueb" data-t="tabUeb">Übergabe</button>
+    <button data-mode="tresor"><span data-t="tresor">Tresor</span> <span id="tabTresorZahl"></span></button>
   </nav>
 
   <main>
@@ -219,14 +219,18 @@
 
     <section id="mUeb" class="hide">
       <div id="platzUeb" class="platz"></div>
-      <div class="listenkopf"><span data-t="tresor">Tresor</span><span id="tresorZahl"></span></div>
-      <div id="tresorListe" class="karte liste"></div>
-      <div id="uebSumme" class="summe"></div>
+      <div id="uebKopf" class="listenkopf"><span data-t="gescannt">Gescannt</span><span id="uebSumme"></span></div>
+      <div id="uebListe" class="karte liste"></div>
       <div id="uebArbeit">
         <div class="listenkopf"><span data-t="material">Belege</span><span id="fotoZahlUeb"></span></div>
         <div id="fotosUeb" class="karte kacheln"></div>
         <button id="btnUebBuchen" class="b w" style="margin-top:12px" data-t="uebBuchen">Übergabe buchen</button>
       </div>
+    </section>
+
+    <section id="mTresor" class="hide">
+      <div class="listenkopf"><span data-t="tresor">Tresor</span><span id="tresorZahl"></span></div>
+      <div id="tresorListe" class="karte liste"></div>
     </section>
 
     <div id="scanBox">
@@ -280,7 +284,7 @@ var TXT = {
         leerTag:'Kein Geld', buchen:'Buchen', bestaetigen:'Bestätigen', zurueck:'Zurücknehmen',
         abrZurueck:'Abrechnung zurücknehmen', uebZurueck:'Übergabe zurücknehmen',
         leerZurueck:'Kein Geld zurücknehmen', uebBuchen:'Übergabe buchen',
-        gewaehlt:'Ausgewählt', tresorLeer:'Tresor leer', abgegeben:'Übergeben',
+        gescannt:'Gescannt', tresorLeer:'Tresor leer', abgegeben:'Übergeben',
         neu:'Neuer Beutel', ungueltig:'Barcode ungültig', doppelt:'Schon in der Liste',
         maxBeutel:'Höchstens 10 Beutel', schonGescannt:'Schon gescannt', erledigtHeute:'Heute erledigt',
         stTresor:'Im Tresor', stAbgeholt:'Übergeben', stGezaehlt:'Von der Bank gezählt',
@@ -302,7 +306,7 @@ var TXT = {
         leerTag:'无钱袋', buchen:'提交', bestaetigen:'确认', zurueck:'撤回',
         abrZurueck:'撤回做账', uebZurueck:'撤回交袋',
         leerZurueck:'撤回无钱袋', uebBuchen:'确认交袋',
-        gewaehlt:'已选', tresorLeer:'保险柜里没有钱袋', abgegeben:'交出',
+        gescannt:'已扫', tresorLeer:'保险柜里没有钱袋', abgegeben:'交出',
         neu:'新钱袋', ungueltig:'条码无效', doppelt:'已在列表',
         maxBeutel:'最多 10 袋', schonGescannt:'已扫过', erledigtHeute:'今天已完成',
         stTresor:'在保险柜', stAbgeholt:'已交出', stGezaehlt:'银行已清点',
@@ -860,7 +864,18 @@ function abrZurueckFragen(d) {
 function istAngehakt(barcode) { return ueb.haken.some(function (x) { return gleich(x, barcode); }); }
 
 function uebAuswahl() {
-  return (stand ? stand.tresor || [] : []).filter(function (b) { return istAngehakt(b.barcode); });
+  var liste = stand ? stand.tresor || [] : [];
+  return ueb.haken.map(function (c) {
+    return liste.filter(function (b) { return gleich(b.barcode, c); })[0];
+  }).filter(Boolean);
+}
+
+function summeVon(liste) { return runde(liste.reduce(function (a, b) { return a + Number(b.betrag || 0); }, 0)); }
+
+function tresorZeile(b, weg) {
+  return '<div class="row"><span class="g"><b>' + esc(datumText(b.datum)) + '</b><div>' + nummerHtml(b.barcode) + '</div></span>' +
+    '<span class="eur">' + esc(betragText(b.betrag)) + '</span>' +
+    (weg ? '<span class="x" data-weg="' + esc(b.barcode) + '">&times;</span>' : '') + '</div>';
 }
 
 function uebZeichnen() {
@@ -868,18 +883,14 @@ function uebZeichnen() {
   var el = $('tresorListe');
   if (!stand) el.innerHTML = '';
   else if (!liste.length) el.innerHTML = '<div class="leer">' + esc(t('tresorLeer')) + '</div>';
-  else el.innerHTML = liste.map(function (b) {
-    var an = istAngehakt(b.barcode);
-    return '<div class="row' + (an ? ' an' : '') + '"><span class="haken">&#10003;</span>' +
-      '<span class="g"><b>' + esc(datumText(b.datum)) + '</b><div>' + nummerHtml(b.barcode) + '</div></span>' +
-      '<span class="eur">' + esc(betragText(b.betrag)) + '</span>' +
-      (an ? '<span class="x" data-weg="' + esc(b.barcode) + '">&times;</span>' : '') + '</div>';
-  }).join('');
+  else el.innerHTML = liste.map(function (b) { return tresorZeile(b, false); }).join('');
+  $('tresorZahl').textContent = liste.length ? liste.length + ' ' + t('stk') + ' · ' + betragText(summeVon(liste)) : '';
+  $('tabTresorZahl').textContent = liste.length ? String(liste.length) : '';
+
   var wahl = uebAuswahl();
-  var summe = runde(wahl.reduce(function (a, b) { return a + Number(b.betrag || 0); }, 0));
-  $('uebSumme').textContent = wahl.length ? t('gewaehlt') + ' ' + wahl.length + ' ' + t('stk') + ' · ' + betragText(summe) : '';
-  var alle = runde(liste.reduce(function (a, b) { return a + Number(b.betrag || 0); }, 0));
-  $('tresorZahl').textContent = liste.length ? liste.length + ' ' + t('stk') + ' · ' + betragText(alle) : '';
+  $('uebListe').innerHTML = wahl.map(function (b) { return tresorZeile(b, true); }).join('');
+  $('uebSumme').textContent = wahl.length ? wahl.length + ' ' + t('stk') + ' · ' + betragText(summeVon(wahl)) : '';
+  show($('uebKopf'), wahl.length > 0);
 
   show($('uebArbeit'), !!stand && (liste.length > 0 || ueb.fotos.length > 0));
   fotosZeichnen($('fotosUeb'), $('fotoZahlUeb'), ueb);
@@ -934,13 +945,20 @@ function uebBuchen() {
   var wahl = uebAuswahl();
   if (!wahl.length || !ueb.fotos.length) return;
   var codes = wahl.map(function (b) { return b.barcode; });
-  var summe = runde(wahl.reduce(function (a, b) { return a + Number(b.betrag || 0); }, 0));
-  if (!ueb.rid) ueb.rid = neueRid();
-  var gesendet = ueb;
-  schreiben('abholung', { rid:ueb.rid, fotos:fotosZumSenden(ueb), barcodes:codes }, function () {
-    if (ueb === gesendet) ueb = neueUebergabe();
-    uebZeichnen();
-    flash('ok', t('uebDone'), codes.length + ' ' + t('stk') + ' · ' + betragText(summe));
+  var summe = summeVon(wahl);
+
+  frage({ titel:t('tabUeb'),
+          gross:esc(betragText(summe)) + '<span class="wt">' + esc(codes.length + ' ' + t('stk')) + '</span>',
+          zeilen:wahl.map(function (b) { return beutelZeile(b.barcode, b.betrag, datumText(b.datum)); }),
+          summe:t('material') + ' ' + ueb.fotos.length + ' ' + t('stkFoto'),
+          knopf:t('bestaetigen') }, function () {
+    if (!ueb.rid) ueb.rid = neueRid();
+    var gesendet = ueb;
+    schreiben('abholung', { rid:ueb.rid, fotos:fotosZumSenden(ueb), barcodes:codes }, function () {
+      if (ueb === gesendet) ueb = neueUebergabe();
+      uebZeichnen();
+      flash('ok', t('uebDone'), codes.length + ' ' + t('stk') + ' · ' + betragText(summe));
+    });
   });
 }
 
@@ -1076,7 +1094,7 @@ $('kameraEin').onchange = $('albumEin').onchange = function (ev) {
 var lastText = '', lastAt = 0;
 
 function onScan(text) {
-  if (dialogOffen || arbeitet || sucht || meldung.kind === 'laden' || !istFiliale()) return;
+  if (dialogOffen || arbeitet || sucht || meldung.kind === 'laden' || !istFiliale() || mode === 'tresor') return;
   var now = Date.now();
 
   if (text === lastText && now - lastAt < 2500) { lastAt = now; return; }
@@ -1227,7 +1245,8 @@ $('abrListe').onclick = function (ev) {
   abrListeZeichnen();
   abrSummeZeichnen();
 };
-$('tresorListe').onclick = function (ev) {
+
+$('uebListe').onclick = function (ev) {
   var weg = ev.target && ev.target.dataset ? ev.target.dataset.weg : undefined;
   if (!weg || arbeitet) return;
   ueb.haken = ueb.haken.filter(function (x) { return !gleich(x, weg); });
@@ -1241,22 +1260,25 @@ $('btnLeer').onclick = leerFragen;
 $('btnLeerZurueck').onclick = leerZurueckFragen;
 $('btnUebBuchen').onclick = uebBuchen;
 
+var REITER = { abr:'tabAbr', ueb:'tabUeb', tresor:'tresor' };
 function modusSetzen(neu) {
-  mode = neu === 'ueb' ? 'ueb' : 'abr';
+  mode = REITER[neu] ? neu : 'abr';
   if (stream) stopCam();
   Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (x) {
     x.classList.toggle('sel', x.dataset.mode === mode);
   });
   show($('mAbr'), istFiliale() && mode === 'abr');
   show($('mUeb'), istFiliale() && mode === 'ueb');
-  $(mode === 'ueb' ? 'platzUeb' : 'platzAbr').appendChild($('scanBox'));
+  show($('mTresor'), istFiliale() && mode === 'tresor');
+  if (mode !== 'tresor') $(mode === 'ueb' ? 'platzUeb' : 'platzAbr').appendChild($('scanBox'));
+  show($('scanBox'), istFiliale() && mode !== 'tresor');
   lastText = '';
 }
 Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) {
   b.onclick = function () {
     if (arbeitet) return;
     modusSetzen(b.dataset.mode);
-    hinweis(mode === 'ueb' ? 'tabUeb' : 'tabAbr');
+    hinweis(REITER[mode]);
 
     if (stand) laden(true, true); else laden(true);
   };
@@ -1265,7 +1287,6 @@ Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (
 function rolleRichten() {
   var ja = istFiliale();
   show($('nav'), ja);
-  show($('scanBox'), ja);
   show($('btnLaden'), ja);
   show($('nurFiliale'), !ja);
   modusSetzen(mode);
@@ -1311,7 +1332,7 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
 window.addEventListener('offline', function () { setNet(false); });
 
-var BUILD = 'a7fa636b7589';
+var BUILD = 'ce97ec99c3ae';
 var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
 var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
 
