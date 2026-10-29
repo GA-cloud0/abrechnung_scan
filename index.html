@@ -130,6 +130,13 @@
     font-size:18px; font-weight:700; }
   .row input.betrag.falsch { border-color:var(--bad); color:var(--bad); }
   .row .eurz { flex:0 0 auto; font-size:17px; font-weight:700; color:var(--dim); margin-left:-2px; }
+
+  textarea.notiz { display:block; width:100%; margin-top:10px; padding:11px 13px; font:inherit; font-size:16px;
+    border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--text); resize:none; }
+  #dlgNotiz { margin-top:8px; padding:9px 11px; border-radius:9px; background:var(--panel); font-size:15px;
+    white-space:pre-wrap; word-break:break-word; }
+  #dlgNotiz:empty { display:none; }
+  #dlgNotiz b { display:block; font-size:12px; color:var(--dim); }
   .summe { text-align:right; font-weight:800; font-size:17px; padding:8px 4px 2px; }
   .summe:empty { display:none; }
   .leer { text-align:center; color:var(--dim); padding:14px 0; }
@@ -211,6 +218,8 @@
         <div id="abrListe" class="karte liste"></div>
         <div class="listenkopf"><span data-t="material">Belege</span><span id="fotoZahlAbr"></span></div>
         <div id="fotosAbr" class="karte kacheln"></div>
+        <div class="listenkopf"><span data-t="notiz">Notiz</span></div>
+        <textarea id="notizAbr" class="notiz" rows="2" maxlength="200"></textarea>
         <button id="btnBuchen" class="b w" style="margin-top:12px" data-t="buchen">Buchen</button>
       </div>
       <div id="leerBox" class="abseits">
@@ -225,6 +234,8 @@
       <div id="uebArbeit">
         <div class="listenkopf"><span data-t="material">Belege</span><span id="fotoZahlUeb"></span></div>
         <div id="fotosUeb" class="karte kacheln"></div>
+        <div class="listenkopf"><span data-t="notiz">Notiz</span></div>
+        <textarea id="notizUeb" class="notiz" rows="2" maxlength="200"></textarea>
         <button id="btnUebBuchen" class="b w" style="margin-top:12px" data-t="uebBuchen">Übergabe buchen</button>
       </div>
     </section>
@@ -259,6 +270,7 @@
     <div id="dlgGross" class="big"></div>
     <div id="dlgListe"></div>
     <div id="dlgSumme" class="summe"></div>
+    <div id="dlgNotiz"></div>
     <div class="two" style="margin-top:12px">
       <button id="dlgNein" class="b g" data-t="cancel">Abbrechen</button>
       <button id="dlgJa" class="b">OK</button>
@@ -294,7 +306,7 @@ var TXT = {
         errDatum:'Datum geändert', errStart:'Datum ungültig', errExists:'Schon erfasst', errBetrag:'Betrag ungültig',
         errFoto:'Foto fehlerhaft', errLeer:'Kein Beutel', errTresor:'Nicht im Tresor',
         errAbgeholt:'Schon übergeben', notFound:'Nicht gefunden', updated:'Neue Fassung geladen',
-        beutel:'Beutel', material:'Belege', kamera:'Kamera', album:'Galerie', stkFoto:'Fotos',
+        beutel:'Beutel', material:'Belege', kamera:'Kamera', album:'Galerie', stkFoto:'Fotos', notiz:'Notiz',
         tresor:'Tresor' },
   zh: { title:'go asia 做账记录', tabAbr:'做账', tabUeb:'交袋',
         cam:'扫描', camOff:'停止', photo:'拍照取码', reload:'刷新',
@@ -316,7 +328,7 @@ var TXT = {
         errDatum:'日期已变', errStart:'日期无效', errExists:'条码已登记', errBetrag:'金额无效',
         errFoto:'照片有误', errLeer:'没有钱袋', errTresor:'不在保险柜',
         errAbgeholt:'已有袋交出', notFound:'未找到', updated:'已更新到新版本',
-        beutel:'钱袋', material:'材料', kamera:'拍照', album:'相册', stkFoto:'份',
+        beutel:'钱袋', material:'材料', kamera:'拍照', album:'相册', stkFoto:'份', notiz:'备注',
         tresor:'保险柜' }
 };
 var lang = 'de';
@@ -614,8 +626,8 @@ var syncSek = 30, autoUhr = 0;
 var mode = 'abr';
 var arbeitet = false, sucht = false;
 
-function neueAbrechnung() { return { fotos:[], beutel:[], rid:'', leerRid:'', leerDatum:'' }; }
-function neueUebergabe() { return { fotos:[], haken:[], rid:'' }; }
+function neueAbrechnung() { return { fotos:[], beutel:[], notiz:'', rid:'', leerRid:'', leerDatum:'' }; }
+function neueUebergabe() { return { fotos:[], haken:[], notiz:'', rid:'' }; }
 var abr = neueAbrechnung(), ueb = neueUebergabe();
 var MAX_FOTOS = 15, fotoLaeuft = false;
 
@@ -683,6 +695,8 @@ function kopfZeigen() { $('who').textContent = filialName(); }
 function zeichnen() { abrZeichnen(); uebZeichnen(); }
 
 var fotoZaehler = 0;
+
+function notizZeigen(feld, o) { if (feld.value !== o.notiz) feld.value = o.notiz; }
 var SVG_KAMERA = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/></svg>';
 var SVG_ALBUM = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg>';
 function fotosZeichnen(el, zahl, o) {
@@ -734,6 +748,7 @@ function abrZeichnen() {
   show($('btnLeerZurueck'), leer);
   show($('abrArbeit'), !!s && !fertig);
   fotosZeichnen($('fotosAbr'), $('fotoZahlAbr'), abr);
+  notizZeigen($('notizAbr'), abr);
   abrListeZeichnen();
   abrSummeZeichnen();
 }
@@ -814,11 +829,11 @@ function abrBuchenFragen() {
   frage({ gross:datumGross(datum),
           zeilen:abr.beutel.map(function (b, i) { return beutelZeile(b.barcode, werte[i]); }),
           summe:beutelSumme(werte.length, summe),
-          knopf:t('bestaetigen') }, function () {
+          notiz:abr.notiz.trim(), knopf:t('bestaetigen') }, function () {
 
     if (!abr.rid) abr.rid = neueRid();
     var gesendet = abr;
-    schreiben('abrechnung', { rid:abr.rid, datum:datum, fotos:fotosZumSenden(abr),
+    schreiben('abrechnung', { rid:abr.rid, datum:datum, fotos:fotosZumSenden(abr), notiz:abr.notiz.trim(),
       beutel:abr.beutel.map(function (b, i) { return { barcode:b.barcode, betrag:werte[i] }; }) }, function () {
       if (abr === gesendet) abr = neueAbrechnung();
       $('startDatum').value = '';
@@ -832,9 +847,9 @@ function leerFragen() {
   if (arbeitet || !stand || abrFertig() || abr.beutel.length) return;
   var datum = abrDatum();
   if (!stand.start && !startOk(datum)) { flashT('bad', 'errStart', datumText(datum)); return; }
-  frage({ titel:t('leerTag'), gross:datumGross(datum), knopf:t('bestaetigen') }, function () {
+  frage({ titel:t('leerTag'), gross:datumGross(datum), notiz:abr.notiz.trim(), knopf:t('bestaetigen') }, function () {
     if (!abr.leerRid || abr.leerDatum !== datum) { abr.leerRid = neueRid(); abr.leerDatum = datum; }
-    schreiben('leertag', { rid:abr.leerRid, datum:datum }, function () {
+    schreiben('leertag', { rid:abr.leerRid, datum:datum, notiz:abr.notiz.trim() }, function () {
 
       abr = neueAbrechnung();
       $('startDatum').value = '';
@@ -901,6 +916,7 @@ function uebZeichnen() {
 
   show($('uebArbeit'), !!stand && (liste.length > 0 || ueb.fotos.length > 0));
   fotosZeichnen($('fotosUeb'), $('fotoZahlUeb'), ueb);
+  notizZeigen($('notizUeb'), ueb);
   $('btnUebBuchen').disabled = arbeitet || !wahl.length || !ueb.fotos.length;
 }
 
@@ -958,10 +974,10 @@ function uebBuchen() {
           gross:esc(euro(summe)) + '<span class="wt">' + esc(codes.length + ' ' + t('stk')) + '</span>',
           zeilen:wahl.map(function (b) { return beutelZeile(b.barcode, b.betrag, datumText(b.datum)); }),
           summe:t('material') + ' ' + ueb.fotos.length + ' ' + t('stkFoto'),
-          knopf:t('bestaetigen') }, function () {
+          notiz:ueb.notiz.trim(), knopf:t('bestaetigen') }, function () {
     if (!ueb.rid) ueb.rid = neueRid();
     var gesendet = ueb;
-    schreiben('abholung', { rid:ueb.rid, fotos:fotosZumSenden(ueb), barcodes:codes }, function () {
+    schreiben('abholung', { rid:ueb.rid, fotos:fotosZumSenden(ueb), barcodes:codes, notiz:ueb.notiz.trim() }, function () {
       if (ueb === gesendet) ueb = neueUebergabe();
       uebZeichnen();
       flash('ok', t('uebDone'), beutelSumme(codes.length, summe));
@@ -1007,6 +1023,7 @@ function frage(o, ja) {
   show($('dlgGross'), !!o.gross);
   $('dlgListe').innerHTML = (o.zeilen || []).join('');
   $('dlgSumme').textContent = o.summe || '';
+  $('dlgNotiz').innerHTML = o.notiz ? '<b>' + esc(t('notiz')) + '</b>' + esc(o.notiz) : '';
   $('dlgJa').textContent = o.knopf;
   $('dlgJa').className = 'b' + (o.rot ? ' rot' : '');
   show($('dlg'), true);
@@ -1262,6 +1279,8 @@ $('uebListe').onclick = function (ev) {
   uebZeichnen();
 };
 $('startDatum').onchange = function () { abr.rid = ''; abr.leerRid = ''; };
+$('notizAbr').oninput = function () { abr.notiz = $('notizAbr').value; abr.rid = ''; abr.leerRid = ''; };
+$('notizUeb').oninput = function () { ueb.notiz = $('notizUeb').value; ueb.rid = ''; };
 $('btnBuchen').onclick = abrBuchenFragen;
 $('btnLeer').onclick = leerFragen;
 $('btnLeerZurueck').onclick = leerZurueckFragen;
@@ -1326,7 +1345,8 @@ function autoTick() {
   autoUhr = 0;
   var a = document.activeElement;
   var still = !cfg.tok || !istFiliale() || document.hidden || navigator.onLine === false ||
-              arbeitet || laedt || sucht || fotoLaeuft || dialogOffen || (!!a && a.tagName === 'INPUT');
+              arbeitet || laedt || sucht || fotoLaeuft || dialogOffen ||
+              (!!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA'));
   if (still) { autoPlanen(); return; }
   laden(true, true).then(function () { autoPlanen(); });
 }
@@ -1339,7 +1359,7 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
 window.addEventListener('offline', function () { setNet(false); });
 
-var BUILD = '89fe08c565d7';
+var BUILD = 'c81f09efb27f';
 var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
 var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
 
@@ -1361,7 +1381,8 @@ function versionPlanen() {
 function ruhig() {
   return !arbeitet && !sucht && !laedt && !pairBusy && !stream && !dialogOffen && !fotoLaeuft &&
          ($('setup').classList.contains('hide') || !$('cfgCode').value) &&
-         !abr.fotos.length && !abr.beutel.length && !ueb.fotos.length && !ueb.haken.length;
+         !abr.fotos.length && !abr.beutel.length && !ueb.fotos.length && !ueb.haken.length &&
+         !abr.notiz.trim() && !ueb.notiz.trim();
 }
 function neuLaden() {
   if (neuUhr) { clearTimeout(neuUhr); neuUhr = 0; }
