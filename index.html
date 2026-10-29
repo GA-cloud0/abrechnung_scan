@@ -68,8 +68,6 @@
   button.b.w { width:100%; }
 
   button.b.rot { background:var(--rot); }
-
-  button.b.da { background:var(--ok); color:#fff; border-color:var(--ok); }
   button.b[disabled] { opacity:.45; }
   input { width:100%; padding:13px; font-size:17px; border-radius:10px; border:1px solid var(--line);
     background:var(--bg); color:var(--text); margin-top:8px; }
@@ -91,29 +89,18 @@
   .karte { background:var(--bg); border:1px solid var(--line); border-radius:12px; overflow:hidden;
     margin-top:10px; }
   .karte:empty { display:none; }
-  .schritt { display:flex; align-items:center; gap:12px; width:100%; min-height:66px; padding:10px 12px;
-    border:0; border-bottom:1px solid var(--line); background:var(--bg); color:var(--text);
-    font:inherit; text-align:left; }
-  .schritt:last-child { border-bottom:0; }
-  .schritt.da { background:#eef6f0; }
-  .schritt .kreis { flex:0 0 auto; width:30px; height:30px; border-radius:50%; border:2px dashed var(--accent);
-    color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; }
-  .schritt .kreis::before { content:attr(data-n); }
-  .schritt.da .kreis { border:0; background:var(--ok); color:#fff; }
-  .schritt.da .kreis::before { content:'\2713'; font-size:18px; }
-  .schritt.laeuft .kreis { border:3px solid rgba(31,58,95,.2); border-top-color:var(--accent);
-    animation:spin .8s linear infinite; }
-  .schritt.laeuft .kreis::before { content:''; }
-  .schritt .text { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
-  .schritt .text b { font-size:16px; }
-  .schritt .text small { font-size:13px; font-weight:700; color:var(--accent); }
-  .schritt .text small:empty { display:none; }
-  .schritt.da .text small { color:var(--ok); }
-  .schritt img { flex:0 0 auto; height:46px; width:46px; object-fit:cover; border-radius:8px;
-    border:2px solid var(--ok); }
-  .schritt .kam { flex:0 0 auto; width:44px; height:44px; border-radius:10px; background:var(--accent);
-    color:#fff; display:flex; align-items:center; justify-content:center; }
-  .schritt.da .kam { display:none; }
+
+  .kacheln { display:flex; flex-wrap:wrap; gap:8px; padding:10px; }
+  .kachel { position:relative; flex:0 0 auto; width:74px; height:74px; border-radius:10px; overflow:hidden; }
+  .kachel img { width:100%; height:100%; object-fit:cover; display:block; }
+  .kachel .weg { position:absolute; top:3px; right:3px; width:28px; height:28px; border-radius:50%;
+    background:rgba(0,0,0,.6); color:#fff; display:flex; align-items:center; justify-content:center;
+    font-size:18px; line-height:1; }
+  .kachel.neu { border:2px dashed var(--accent); background:var(--panel); color:var(--accent); padding:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    font:inherit; font-size:13px; font-weight:700; }
+
+  .kachel.neu * { pointer-events:none; }
 
   .liste .row { margin:0; border:0; border-bottom:1px solid var(--line); border-radius:0;
     background:var(--bg); padding:11px 12px; }
@@ -216,23 +203,14 @@
         <input id="startDatum" type="date">
       </div>
       <div class="zuletzt"><span id="zuletztText"></span><button id="btnLeerZurueck" class="hide" type="button">&#8630;</button></div>
-
-      <div id="abrArbeit" class="karte">
-        <button id="btnFotoAbr" class="schritt" type="button">
-          <span class="kreis" data-n="1"></span>
-          <span class="text"><b data-t="fotoAbr">Foto Abrechnung</b><small id="sFotoAbr"></small></span>
-          <img id="imgAbr" class="hide" alt="">
-          <span class="kam"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/></svg></span>
-        </button>
-        <div id="schrittAbr" class="schritt">
-          <span class="kreis" data-n="2"></span>
-          <span class="text"><b data-t="schrittBeutel">Beutel</b><small id="abrSumme"></small><small id="tippAbr" data-t="scanTipp">Beutel scannen</small></span>
-        </div>
-      </div>
       <div id="platzAbr" class="platz"></div>
-      <div id="abrListe" class="karte liste"></div>
-      <div id="abrKnoepfe" style="margin-top:12px">
-        <button id="btnBuchen" class="b w" data-t="buchen">Buchen</button>
+
+      <div id="abrArbeit">
+        <div id="abrKopf" class="listenkopf"><span data-t="beutel">Beutel</span><span id="abrSumme"></span></div>
+        <div id="abrListe" class="karte liste"></div>
+        <div class="listenkopf"><span data-t="material">Belege</span><span id="fotoZahlAbr"></span></div>
+        <div id="fotosAbr" class="karte kacheln"></div>
+        <button id="btnBuchen" class="b w" style="margin-top:12px" data-t="buchen">Buchen</button>
       </div>
       <div id="leerBox" class="abseits">
         <button id="btnLeer" class="b rot w" data-t="leerTag">Kein Geld</button>
@@ -243,19 +221,10 @@
       <div id="platzUeb" class="platz"></div>
       <div class="listenkopf"><span data-t="tresor">Tresor</span><span id="tresorZahl"></span></div>
       <div id="tresorListe" class="karte liste"></div>
+      <div id="uebSumme" class="summe"></div>
       <div id="uebArbeit">
-        <div class="karte">
-          <div id="schrittUeb" class="schritt">
-            <span class="kreis" data-n="1"></span>
-            <span class="text"><b data-t="schrittBeutel">Beutel</b><small id="uebSumme"></small><small id="tippUeb" data-t="scanTipp">Beutel scannen</small></span>
-          </div>
-          <button id="btnFotoUeb" class="schritt" type="button">
-            <span class="kreis" data-n="2"></span>
-            <span class="text"><b data-t="fotoUeb">Foto Beleg</b><small id="sFotoUeb"></small></span>
-            <img id="imgUeb" class="hide" alt="">
-            <span class="kam"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/></svg></span>
-          </button>
-        </div>
+        <div class="listenkopf"><span data-t="material">Belege</span><span id="fotoZahlUeb"></span></div>
+        <div id="fotosUeb" class="karte kacheln"></div>
         <button id="btnUebBuchen" class="b w" style="margin-top:12px" data-t="uebBuchen">Übergabe buchen</button>
       </div>
     </section>
@@ -276,8 +245,8 @@
   </main>
 </div>
 
-<input id="fotoAbr" type="file" accept="image/*" capture="environment" class="hide">
-<input id="fotoUeb" type="file" accept="image/*" capture="environment" class="hide">
+<input id="kameraEin" type="file" accept="image/*" capture="environment" class="hide">
+<input id="albumEin" type="file" accept="image/*" multiple class="hide">
 
 <div id="dlg" class="hide">
   <div class="karte">
@@ -307,20 +276,20 @@ var TXT = {
         check:'Prüfziffer falsch', offline:'Kein Netz', needPair:'Anmelden',
         pairFail:'Kopplung fehlgeschlagen', nurFiliale:'Nur für Filialen', forbidden:'Keine Berechtigung',
         startdatum:'Startdatum', fertig:'Erledigt', zuletzt:'Zuletzt', stk:'Beutel',
-        fotoAbr:'Foto Abrechnung', fotoUeb:'Foto Beleg', fotoFehler:'Foto nicht lesbar',
+        fotoFehler:'Foto nicht lesbar', fotoLaedt:'Fotos werden vorbereitet …', maxFotos:'Höchstens 15 Fotos',
         leerTag:'Kein Geld', buchen:'Buchen', bestaetigen:'Bestätigen', zurueck:'Zurücknehmen',
         abrZurueck:'Abrechnung zurücknehmen', uebZurueck:'Übergabe zurücknehmen',
         leerZurueck:'Kein Geld zurücknehmen', uebBuchen:'Übergabe buchen',
-        gescannt:'Gescannt', tresorLeer:'Tresor leer', abgegeben:'Übergeben',
+        gewaehlt:'Ausgewählt', tresorLeer:'Tresor leer', abgegeben:'Übergeben',
         neu:'Neuer Beutel', ungueltig:'Barcode ungültig', doppelt:'Schon in der Liste',
         maxBeutel:'Höchstens 10 Beutel', schonGescannt:'Schon gescannt', erledigtHeute:'Heute erledigt',
         stTresor:'Im Tresor', stAbgeholt:'Übergeben', stGezaehlt:'Von der Bank gezählt',
         stFremd:'Kein Abrechnungsbeutel', fremd:'Kein Abrechnungsbeutel', andereFiliale:'Andere Filiale',
         abrDone:'Gebucht', leerDone:'Kein Geld gebucht', uebDone:'Übergabe gebucht', zurueckDone:'Zurückgenommen',
         errDatum:'Datum geändert', errStart:'Datum ungültig', errExists:'Schon erfasst', errBetrag:'Betrag ungültig',
-        errFoto:'Foto fehlt', errLeer:'Kein Beutel', errTresor:'Nicht im Tresor',
+        errFoto:'Foto fehlerhaft', errLeer:'Kein Beutel', errTresor:'Nicht im Tresor',
         errAbgeholt:'Schon übergeben', notFound:'Nicht gefunden', updated:'Neue Fassung geladen',
-        fotoTipp:'Antippen', fotoDa:'Aufgenommen', scanTipp:'Beutel scannen', schrittBeutel:'Beutel',
+        beutel:'Beutel', material:'Belege', kamera:'Kamera', album:'Galerie', stkFoto:'Fotos',
         tresor:'Tresor' },
   zh: { title:'go asia 做账记录', tabAbr:'做账', tabUeb:'交袋',
         cam:'扫描', camOff:'停止', photo:'拍照取码', reload:'刷新',
@@ -329,20 +298,20 @@ var TXT = {
         check:'校验位错误', offline:'无网络', needPair:'请先配对',
         pairFail:'配对失败', nurFiliale:'仅限门店', forbidden:'无权限',
         startdatum:'开始日期', fertig:'已完成', zuletzt:'上次', stk:'袋',
-        fotoAbr:'账单照片', fotoUeb:'收据照片', fotoFehler:'照片无法读取',
+        fotoFehler:'照片无法读取', fotoLaedt:'处理照片…', maxFotos:'最多 15 张',
         leerTag:'无钱袋', buchen:'提交', bestaetigen:'确认', zurueck:'撤回',
         abrZurueck:'撤回做账', uebZurueck:'撤回交袋',
         leerZurueck:'撤回无钱袋', uebBuchen:'确认交袋',
-        gescannt:'已扫', tresorLeer:'保险柜里没有钱袋', abgegeben:'交出',
+        gewaehlt:'已选', tresorLeer:'保险柜里没有钱袋', abgegeben:'交出',
         neu:'新钱袋', ungueltig:'条码无效', doppelt:'已在列表',
         maxBeutel:'最多 10 袋', schonGescannt:'已扫过', erledigtHeute:'今天已完成',
         stTresor:'在保险柜', stAbgeholt:'已交出', stGezaehlt:'银行已清点',
         stFremd:'非做账钱袋', fremd:'非做账钱袋', andereFiliale:'非本店钱袋',
         abrDone:'已提交', leerDone:'已记无钱袋', uebDone:'已交袋', zurueckDone:'已撤回',
         errDatum:'日期已变', errStart:'日期无效', errExists:'条码已登记', errBetrag:'金额无效',
-        errFoto:'缺少照片', errLeer:'没有钱袋', errTresor:'不在保险柜',
+        errFoto:'照片有误', errLeer:'没有钱袋', errTresor:'不在保险柜',
         errAbgeholt:'已有袋交出', notFound:'未找到', updated:'已更新到新版本',
-        fotoTipp:'点击拍照', fotoDa:'已拍照', scanTipp:'请扫描钱袋', schrittBeutel:'钱袋',
+        beutel:'钱袋', material:'材料', kamera:'拍照', album:'相册', stkFoto:'张',
         tresor:'保险柜' }
 };
 var lang = 'de';
@@ -598,8 +567,13 @@ function setNet(on) {
   el.textContent = on ? '●' : '○';
   el.className = 'tag ' + (on ? 'on' : 'off');
 }
+
 function netz(p) {
-  return p.then(function (d) { setNet(true); return d; }, function (e) { setNet(false); throw e; });
+  return p.then(function (d) {
+    setNet(true);
+    if (meldung.key === 'offline') hinweis('ready');
+    return d;
+  }, function (e) { setNet(false); throw e; });
 }
 
 function apiGet(action, params) {
@@ -609,9 +583,10 @@ function apiGet(action, params) {
 }
 
 function apiPost(action, body) {
+  var frist = 90000 + 6000 * ((body && body.fotos) || []).length;
   return netz(mitFrist(fetch(cfg.api, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=UTF-8' },
     body:JSON.stringify(Object.assign({ action:action, tok:cfg.tok }, body || {})) })
-    .then(function (r) { return r.json(); }), 90000)).then(guard);
+    .then(function (r) { return r.json(); }), frist)).then(guard);
 }
 
 function guard(d) {
@@ -629,9 +604,10 @@ var syncSek = 30, autoUhr = 0;
 var mode = 'abr';
 var arbeitet = false, sucht = false;
 
-function neueAbrechnung() { return { foto:'', vorschau:'', beutel:[], rid:'', leerRid:'', leerDatum:'' }; }
-function neueUebergabe() { return { foto:'', vorschau:'', haken:[], rid:'' }; }
+function neueAbrechnung() { return { fotos:[], beutel:[], rid:'', leerRid:'', leerDatum:'' }; }
+function neueUebergabe() { return { fotos:[], haken:[], rid:'' }; }
 var abr = neueAbrechnung(), ueb = neueUebergabe();
+var MAX_FOTOS = 15, fotoLaeuft = false;
 
 var FEHLER_KEY = { datum:'errDatum', exists:'errExists', gs1:'ungueltig', betrag:'errBetrag',
                    foto:'errFoto', leer:'errLeer', nichtImTresor:'errTresor', abgeholt:'errAbgeholt',
@@ -688,22 +664,27 @@ function imTresor(barcode) {
   return !!stand && (stand.tresor || []).some(function (x) { return gleich(x.barcode, barcode); });
 }
 
-function kopfZeigen() {
-  var f = cfg.filiale;
-  $('who').textContent = f && (f.name || f.key) || cfg.who || '';
+function filialName() {
+  if (!istFiliale()) return cfg.who || '';
+  return (cfg.filiale && cfg.filiale.name) || '';
 }
+function kopfZeigen() { $('who').textContent = filialName(); }
 
 function zeichnen() { abrZeichnen(); uebZeichnen(); }
 
 var fotoZaehler = 0;
-function fotoZeichnen(knopf, bild, o, hinweis) {
-  knopf.classList.toggle('da', !!o.foto);
-  hinweis.textContent = t(o.foto ? 'fotoDa' : 'fotoTipp');
-  show(bild, !!o.foto);
-  var v = o.foto ? String(o.fotoNr) : '';
-  if (bild.dataset.v === v) return;
-  if (v) bild.src = o.vorschau; else bild.removeAttribute('src');
-  bild.dataset.v = v;
+var SVG_KAMERA = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/></svg>';
+var SVG_ALBUM = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg>';
+function fotosZeichnen(el, zahl, o) {
+  zahl.textContent = o.fotos.length ? o.fotos.length + ' ' + t('stkFoto') : '';
+  var v = o.fotos.map(function (f) { return f.nr; }).join(',') + '|' + lang;
+  if (el.dataset.v === v) return;
+  el.dataset.v = v;
+  el.innerHTML = o.fotos.map(function (f, i) {
+    return '<span class="kachel"><img src="' + esc(f.bild) + '" alt=""><span class="weg" data-weg="' + i + '">&times;</span></span>';
+  }).join('') + (o.fotos.length >= MAX_FOTOS ? '' :
+    '<button class="kachel neu" type="button" data-neu="kamera">' + SVG_KAMERA + '<span>' + esc(t('kamera')) + '</span></button>' +
+    '<button class="kachel neu" type="button" data-neu="album">' + SVG_ALBUM + '<span>' + esc(t('album')) + '</span></button>');
 }
 
 function abrFertig() { return !!stand && !!stand.start && !!stand.fertig; }
@@ -741,12 +722,8 @@ function abrZeichnen() {
   $('zuletztText').textContent = !z ? '' : t('zuletzt') + ' ' + datumKurz(z.datum) + ' · ' +
     (leer ? t('leerTag') : z.anzahl + ' ' + t('stk') + ' · ' + betragText(z.summe));
   show($('btnLeerZurueck'), leer);
-  var offen = !!s && !fertig;
-  show($('abrArbeit'), offen);
-  show($('abrListe'), offen);
-  show($('abrSumme'), offen);
-  show($('abrKnoepfe'), offen);
-  fotoZeichnen($('btnFotoAbr'), $('imgAbr'), abr, $('sFotoAbr'));
+  show($('abrArbeit'), !!s && !fertig);
+  fotosZeichnen($('fotosAbr'), $('fotoZahlAbr'), abr);
   abrListeZeichnen();
   abrSummeZeichnen();
 }
@@ -767,10 +744,9 @@ function abrSummeZeichnen() {
   var werte = abrBetraege(), summe = 0, alle = werte.length > 0;
   werte.forEach(function (w) { if (w === null) alle = false; else summe += w; });
   $('abrSumme').textContent = werte.length ? werte.length + ' ' + t('stk') + ' · ' + betragText(runde(summe)) : '';
-  show($('tippAbr'), !werte.length);
-  $('schrittAbr').classList.toggle('da', alle);
+  show($('abrKopf'), werte.length > 0);
   var offen = !!stand && !abrFertig();
-  $('btnBuchen').disabled = arbeitet || !offen || !abr.foto || !alle;
+  $('btnBuchen').disabled = arbeitet || !offen || !abr.fotos.length || !alle;
   $('btnLeer').disabled = arbeitet || !offen || abr.beutel.length > 0;
 
   show($('leerBox'), offen && !abr.beutel.length);
@@ -819,10 +795,10 @@ function datumGross(datum) {
 }
 
 function abrBuchenFragen() {
-  if (arbeitet || !stand || abrFertig()) return;
+  if (arbeitet || fotoLaeuft || !stand || abrFertig()) return;
   var datum = abrDatum(), werte = abrBetraege();
   if (!stand.start && !startOk(datum)) { flashT('bad', 'errStart', datumText(datum)); return; }
-  if (!abr.foto || !werte.length || werte.some(function (w) { return w === null; })) return;
+  if (!abr.fotos.length || !werte.length || werte.some(function (w) { return w === null; })) return;
   var summe = runde(werte.reduce(function (a, b) { return a + b; }, 0));
   frage({ gross:datumGross(datum),
           zeilen:abr.beutel.map(function (b, i) { return beutelZeile(b.barcode, werte[i]); }),
@@ -831,7 +807,7 @@ function abrBuchenFragen() {
 
     if (!abr.rid) abr.rid = neueRid();
     var gesendet = abr;
-    schreiben('abrechnung', { rid:abr.rid, datum:datum, foto:abr.foto,
+    schreiben('abrechnung', { rid:abr.rid, datum:datum, fotos:fotosZumSenden(abr),
       beutel:abr.beutel.map(function (b, i) { return { barcode:b.barcode, betrag:werte[i] }; }) }, function () {
       if (abr === gesendet) abr = neueAbrechnung();
       $('startDatum').value = '';
@@ -901,14 +877,13 @@ function uebZeichnen() {
   }).join('');
   var wahl = uebAuswahl();
   var summe = runde(wahl.reduce(function (a, b) { return a + Number(b.betrag || 0); }, 0));
-  $('uebSumme').textContent = wahl.length ? t('gescannt') + ' ' + wahl.length + ' ' + t('stk') + ' · ' + betragText(summe) : '';
-  show($('tippUeb'), !wahl.length);
-  $('schrittUeb').classList.toggle('da', wahl.length > 0);
+  $('uebSumme').textContent = wahl.length ? t('gewaehlt') + ' ' + wahl.length + ' ' + t('stk') + ' · ' + betragText(summe) : '';
   var alle = runde(liste.reduce(function (a, b) { return a + Number(b.betrag || 0); }, 0));
   $('tresorZahl').textContent = liste.length ? liste.length + ' ' + t('stk') + ' · ' + betragText(alle) : '';
-  show($('uebArbeit'), !!stand);
-  fotoZeichnen($('btnFotoUeb'), $('imgUeb'), ueb, $('sFotoUeb'));
-  $('btnUebBuchen').disabled = arbeitet || !wahl.length || !ueb.foto;
+
+  show($('uebArbeit'), !!stand && (liste.length > 0 || ueb.fotos.length > 0));
+  fotosZeichnen($('fotosUeb'), $('fotoZahlUeb'), ueb);
+  $('btnUebBuchen').disabled = arbeitet || !wahl.length || !ueb.fotos.length;
 }
 
 function uebScan(code) {
@@ -955,14 +930,14 @@ function uebZurueckFragen(d) {
 }
 
 function uebBuchen() {
-  if (arbeitet || !stand) return;
+  if (arbeitet || fotoLaeuft || !stand) return;
   var wahl = uebAuswahl();
-  if (!wahl.length || !ueb.foto) return;
+  if (!wahl.length || !ueb.fotos.length) return;
   var codes = wahl.map(function (b) { return b.barcode; });
   var summe = runde(wahl.reduce(function (a, b) { return a + Number(b.betrag || 0); }, 0));
   if (!ueb.rid) ueb.rid = neueRid();
   var gesendet = ueb;
-  schreiben('abholung', { rid:ueb.rid, foto:ueb.foto, barcodes:codes }, function () {
+  schreiben('abholung', { rid:ueb.rid, fotos:fotosZumSenden(ueb), barcodes:codes }, function () {
     if (ueb === gesendet) ueb = neueUebergabe();
     uebZeichnen();
     flash('ok', t('uebDone'), codes.length + ' ' + t('stk') + ' · ' + betragText(summe));
@@ -994,7 +969,7 @@ function beschaeftigt(on) {
   show($('busy'), on);
   if (on && stream) stopCam();
   abrSummeZeichnen();
-  $('btnUebBuchen').disabled = on || !uebAuswahl().length || !ueb.foto;
+  $('btnUebBuchen').disabled = on || !uebAuswahl().length || !ueb.fotos.length;
 }
 
 var dialogJa = null, dialogOffen = false;
@@ -1020,23 +995,29 @@ function frageZu() {
 $('dlgNein').onclick = frageZu;
 $('dlgJa').onclick = function () { var ja = dialogJa; frageZu(); if (ja) ja(); };
 
-var FOTO_KANTE = 1600, FOTO_GUETE = 0.7;
+var FOTO_KANTE = 1600, FOTO_GUETE = 0.7, BILD_KANTE = 240;
+
+function verkleinert(img, kante) {
+  var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  var f = Math.min(1, kante / Math.max(w, h));
+  var c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w * f));
+  c.height = Math.max(1, Math.round(h * f));
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
 
 function fotoLesen(datei) {
   return new Promise(function (fertig, fehler) {
     var url = URL.createObjectURL(datei), img = new Image();
     img.onload = function () {
       try {
-        var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
-        var f = Math.min(1, FOTO_KANTE / Math.max(w, h));
-        var c = document.createElement('canvas');
-        c.width = Math.max(1, Math.round(w * f));
-        c.height = Math.max(1, Math.round(h * f));
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        var c = verkleinert(img, FOTO_KANTE);
         var daten = c.toDataURL('image/jpeg', FOTO_GUETE);
         if (daten.length > 3000000) daten = c.toDataURL('image/jpeg', 0.5);
+        var bild = verkleinert(img, BILD_KANTE).toDataURL('image/jpeg', 0.7);
         URL.revokeObjectURL(url);
-        fertig({ vorschau:daten, foto:daten.slice(daten.indexOf(',') + 1) });
+        fertig({ foto:daten.slice(daten.indexOf(',') + 1), bild:bild });
       } catch (e) {
         URL.revokeObjectURL(url);
         fehler(e);
@@ -1047,35 +1028,50 @@ function fotoLesen(datei) {
   });
 }
 
-function fotoKnopf(knopf, eingabe, bild, ziel) {
-  knopf.onclick = function () { if (!arbeitet) eingabe.click(); };
-  bild.onclick = knopf.onclick;
-  eingabe.onchange = function (ev) {
-    var datei = ev.target.files && ev.target.files[0];
-    ev.target.value = '';
-    if (!datei) return;
+function fotosZumSenden(o) { return o.fotos.map(function (f) { return f.foto; }); }
 
-    knopf.classList.add('laeuft');
-    fotoLesen(datei).then(function (r) {
-      var o = ziel();
-      o.foto = r.foto;
-      o.vorschau = r.vorschau;
-      o.fotoNr = ++fotoZaehler;
-      o.rid = '';
-      knopf.classList.remove('laeuft');
-      zeichnen();
-    }, function () {
-      knopf.classList.remove('laeuft');
-      flashT('bad', 'fotoFehler');
+function fotosDazu(dateien) {
+  var o = mode === 'ueb' ? ueb : abr;
+  var platz = MAX_FOTOS - o.fotos.length;
+  var liste = dateien.slice(0, Math.max(0, platz)), zuViel = dateien.length > liste.length;
+  if (!liste.length) { if (zuViel) flashT('warn', 'maxFotos'); return; }
+  fotoLaeuft = true;
+  warten('fotoLaedt');
+  var schlecht = 0;
+  liste.reduce(function (kette, datei) {
+    return kette.then(function () {
+      return fotoLesen(datei).then(function (r) {
+        o.fotos.push({ foto:r.foto, bild:r.bild, nr:++fotoZaehler });
+        o.rid = '';
+      }, function () { schlecht++; });
     });
-  };
+  }, Promise.resolve()).then(function () {
+    fotoLaeuft = false;
+    zeichnen();
+    if (schlecht) flashT('bad', 'fotoFehler');
+    else if (zuViel) flashT('warn', 'maxFotos');
+    else wartenAus();
+  });
 }
 
-$('schrittAbr').onclick = $('schrittUeb').onclick = function () {
-  if (!stream && !arbeitet) $('btnCam').click();
+function fotoKlick(ev) {
+  var d = ev.target && ev.target.dataset;
+  if (!d || arbeitet || fotoLaeuft) return;
+  if (d.neu === 'kamera') { $('kameraEin').click(); return; }
+  if (d.neu === 'album') { $('albumEin').click(); return; }
+  var o = mode === 'ueb' ? ueb : abr, i = d.weg !== undefined ? Number(d.weg) : NaN;
+  if (!(i >= 0) || !o.fotos[i]) return;
+  o.fotos.splice(i, 1);
+  o.rid = '';
+  zeichnen();
+}
+$('fotosAbr').onclick = $('fotosUeb').onclick = fotoKlick;
+$('kameraEin').onchange = $('albumEin').onchange = function (ev) {
+
+  var dateien = Array.prototype.slice.call(ev.target.files || []);
+  ev.target.value = '';
+  fotosDazu(dateien);
 };
-fotoKnopf($('btnFotoAbr'), $('fotoAbr'), $('imgAbr'), function () { return abr; });
-fotoKnopf($('btnFotoUeb'), $('fotoUeb'), $('imgUeb'), function () { return ueb; });
 
 var lastText = '', lastAt = 0;
 
@@ -1301,8 +1297,8 @@ function autoPlanen(ms) {
 function autoTick() {
   autoUhr = 0;
   var a = document.activeElement;
-  var still = !cfg.tok || !istFiliale() || !stand || document.hidden || navigator.onLine === false ||
-              arbeitet || laedt || sucht || dialogOffen || (!!a && a.tagName === 'INPUT');
+  var still = !cfg.tok || !istFiliale() || document.hidden || navigator.onLine === false ||
+              arbeitet || laedt || sucht || fotoLaeuft || dialogOffen || (!!a && a.tagName === 'INPUT');
   if (still) { autoPlanen(); return; }
   laden(true, true).then(function () { autoPlanen(); });
 }
@@ -1315,7 +1311,7 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
 window.addEventListener('offline', function () { setNet(false); });
 
-var BUILD = '0ad8f6c3d355';
+var BUILD = 'a7fa636b7589';
 var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
 var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
 
@@ -1335,9 +1331,9 @@ function versionPlanen() {
 }
 
 function ruhig() {
-  return !arbeitet && !sucht && !laedt && !pairBusy && !stream && !dialogOffen &&
+  return !arbeitet && !sucht && !laedt && !pairBusy && !stream && !dialogOffen && !fotoLaeuft &&
          ($('setup').classList.contains('hide') || !$('cfgCode').value) &&
-         !abr.foto && !abr.beutel.length && !ueb.foto && !ueb.haken.length;
+         !abr.fotos.length && !abr.beutel.length && !ueb.fotos.length && !ueb.haken.length;
 }
 function neuLaden() {
   if (neuUhr) { clearTimeout(neuUhr); neuUhr = 0; }
@@ -1358,8 +1354,8 @@ function openSetup(on) {
   $('cfgCode').value = '';
   show($('pairBox'), !cfg.tok);
   show($('doneBox'), !!cfg.tok);
-  $('meName').textContent = cfg.who || '';
-  $('meRole').textContent = (cfg.rolle || '') + (cfg.filiale && cfg.filiale.key ? ' ' + cfg.filiale.key : '');
+  $('meName').textContent = filialName();
+  $('meRole').textContent = cfg.rolle || '';
 }
 $('gear').onclick = function () {
   if (arbeitet) return;
