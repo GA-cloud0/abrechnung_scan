@@ -437,6 +437,9 @@ function betragLesen(text) {
   return n > 0 && n < 1000000 ? n : null;
 }
 
+var ABSTAND = ' ';
+function beutelSumme(anzahl, betrag) { return anzahl + ' ' + t('stk') + ABSTAND + betragText(betrag); }
+
 function betragText(x) {
   var n = Number(x);
   if (x === '' || x === null || x === undefined || !isFinite(n)) return '';
@@ -723,8 +726,8 @@ function abrZeichnen() {
     if (!d.value) d.value = s.heute;
   }
   var z = s && s.letzte, leer = !!z && z.typ === '无钱袋';
-  $('zuletztText').textContent = !z ? '' : t('zuletzt') + ' ' + datumKurz(z.datum) + ' · ' +
-    (leer ? t('leerTag') : z.anzahl + ' ' + t('stk') + ' · ' + betragText(z.summe));
+  $('zuletztText').textContent = !z ? '' : t('zuletzt') + ' ' + datumKurz(z.datum) + ABSTAND +
+    (leer ? t('leerTag') : beutelSumme(z.anzahl, z.summe));
   show($('btnLeerZurueck'), leer);
   show($('abrArbeit'), !!s && !fertig);
   fotosZeichnen($('fotosAbr'), $('fotoZahlAbr'), abr);
@@ -747,7 +750,7 @@ function abrBetraege() { return abr.beutel.map(function (b) { return betragLesen
 function abrSummeZeichnen() {
   var werte = abrBetraege(), summe = 0, alle = werte.length > 0;
   werte.forEach(function (w) { if (w === null) alle = false; else summe += w; });
-  $('abrSumme').textContent = werte.length ? werte.length + ' ' + t('stk') + ' · ' + betragText(runde(summe)) : '';
+  $('abrSumme').textContent = werte.length ? beutelSumme(werte.length, runde(summe)) : '';
   show($('abrKopf'), werte.length > 0);
   var offen = !!stand && !abrFertig();
   $('btnBuchen').disabled = arbeitet || !offen || !abr.fotos.length || !alle;
@@ -806,7 +809,7 @@ function abrBuchenFragen() {
   var summe = runde(werte.reduce(function (a, b) { return a + b; }, 0));
   frage({ gross:datumGross(datum),
           zeilen:abr.beutel.map(function (b, i) { return beutelZeile(b.barcode, werte[i]); }),
-          summe:werte.length + ' ' + t('stk') + ' · ' + betragText(summe),
+          summe:beutelSumme(werte.length, summe),
           knopf:t('bestaetigen') }, function () {
 
     if (!abr.rid) abr.rid = neueRid();
@@ -816,7 +819,7 @@ function abrBuchenFragen() {
       if (abr === gesendet) abr = neueAbrechnung();
       $('startDatum').value = '';
       zeichnen();
-      flash('ok', t('abrDone') + ' ' + datumText(datum), werte.length + ' ' + t('stk') + ' · ' + betragText(summe));
+      flash('ok', t('abrDone') + ' ' + datumText(datum), beutelSumme(werte.length, summe));
     });
   });
 }
@@ -853,7 +856,7 @@ function abrZurueckFragen(d) {
           zeilen:liste.map(function (b) {
             return beutelZeile(b.barcode, b.betrag, b.status && b.status !== '保险柜' ? t(STATUS_KEY[b.status] || '') : '');
           }),
-          summe:liste.length + ' ' + t('stk') + ' · ' + betragText(a.summe),
+          summe:beutelSumme(liste.length, a.summe),
           knopf:t('zurueck'), rot:true }, function () {
     schreiben('abrechnungZurueck', { barcode:d.barcode }, function () {
       flash('ok', t('zurueckDone'), datumText(a.datum));
@@ -884,12 +887,12 @@ function uebZeichnen() {
   if (!stand) el.innerHTML = '';
   else if (!liste.length) el.innerHTML = '<div class="leer">' + esc(t('tresorLeer')) + '</div>';
   else el.innerHTML = liste.map(function (b) { return tresorZeile(b, false); }).join('');
-  $('tresorZahl').textContent = liste.length ? liste.length + ' ' + t('stk') + ' · ' + betragText(summeVon(liste)) : '';
+  $('tresorZahl').textContent = liste.length ? beutelSumme(liste.length, summeVon(liste)) : '';
   $('tabTresorZahl').textContent = liste.length ? String(liste.length) : '';
 
   var wahl = uebAuswahl();
   $('uebListe').innerHTML = wahl.map(function (b) { return tresorZeile(b, true); }).join('');
-  $('uebSumme').textContent = wahl.length ? wahl.length + ' ' + t('stk') + ' · ' + betragText(summeVon(wahl)) : '';
+  $('uebSumme').textContent = wahl.length ? beutelSumme(wahl.length, summeVon(wahl)) : '';
   show($('uebKopf'), wahl.length > 0);
 
   show($('uebArbeit'), !!stand && (liste.length > 0 || ueb.fotos.length > 0));
@@ -957,7 +960,7 @@ function uebBuchen() {
     schreiben('abholung', { rid:ueb.rid, fotos:fotosZumSenden(ueb), barcodes:codes }, function () {
       if (ueb === gesendet) ueb = neueUebergabe();
       uebZeichnen();
-      flash('ok', t('uebDone'), codes.length + ' ' + t('stk') + ' · ' + betragText(summe));
+      flash('ok', t('uebDone'), beutelSumme(codes.length, summe));
     });
   });
 }
@@ -1332,7 +1335,7 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
 window.addEventListener('offline', function () { setNet(false); });
 
-var BUILD = 'e8e69a0bc294';
+var BUILD = '8158f5ac67ee';
 var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
 var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
 
