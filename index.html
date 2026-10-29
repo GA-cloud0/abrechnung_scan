@@ -302,7 +302,7 @@ var TXT = {
         check:'校验位错误', offline:'无网络', needPair:'请先配对',
         pairFail:'配对失败', nurFiliale:'仅限门店', forbidden:'无权限',
         startdatum:'开始日期', fertig:'已完成', zuletzt:'上次', stk:'袋',
-        fotoFehler:'照片无法读取', fotoLaedt:'处理照片…', maxFotos:'最多 15 张',
+        fotoFehler:'照片无法读取', fotoLaedt:'处理照片…', maxFotos:'最多 15 份',
         leerTag:'无钱袋', buchen:'提交', bestaetigen:'确认', zurueck:'撤回',
         abrZurueck:'撤回做账', uebZurueck:'撤回交袋',
         leerZurueck:'撤回无钱袋', uebBuchen:'确认交袋',
@@ -315,7 +315,7 @@ var TXT = {
         errDatum:'日期已变', errStart:'日期无效', errExists:'条码已登记', errBetrag:'金额无效',
         errFoto:'照片有误', errLeer:'没有钱袋', errTresor:'不在保险柜',
         errAbgeholt:'已有袋交出', notFound:'未找到', updated:'已更新到新版本',
-        beutel:'钱袋', material:'材料', kamera:'拍照', album:'相册', stkFoto:'张',
+        beutel:'钱袋', material:'材料', kamera:'拍照', album:'相册', stkFoto:'份',
         tresor:'保险柜' }
 };
 var lang = 'de';
@@ -1332,7 +1332,7 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
 window.addEventListener('offline', function () { setNet(false); });
 
-var BUILD = 'ce97ec99c3ae';
+var BUILD = 'e8e69a0bc294';
 var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
 var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
 
