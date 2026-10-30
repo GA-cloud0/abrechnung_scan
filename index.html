@@ -65,6 +65,11 @@
     box-shadow:0 0 0 2000px rgba(0,0,0,.3); pointer-events:none; }
   .cam .fr::after { content:""; position:absolute; left:0; right:0; top:50%; height:2px; background:#e53e3e; }
 
+  .camTools { position:absolute; right:8px; bottom:8px; display:flex; gap:6px; }
+  .camTools button { border:0; border-radius:8px; padding:6px 11px; font-size:15px; font-weight:800;
+    background:rgba(255,255,255,.85); color:var(--text); }
+  .camTools button.an { background:var(--hell); color:var(--kopf); }
+
   .two { display:flex; gap:8px; }
   button.b { flex:1; padding:14px 8px; font-size:16px; font-weight:700; border:0; border-radius:10px;
     background:var(--accent); color:#fff; }
@@ -246,7 +251,9 @@
     </section>
 
     <div id="scanBox">
-      <div class="cam hide" id="cam"><video id="video" playsinline muted autoplay></video><div class="fr"></div></div>
+      <div class="cam hide" id="cam"><video id="video" playsinline muted autoplay></video><div class="fr"></div>
+        <div class="camTools"><button id="btnZoom" class="hide" type="button">2&times;</button><button id="btnTorch" class="hide" type="button">&#128294;</button></div>
+      </div>
       <div class="two">
         <button id="btnCam" class="b" data-t="cam">Scannen</button>
         <button id="btnShot" class="b g" data-t="photo">Foto-Code</button>
@@ -307,6 +314,7 @@ var TXT = {
         errFoto:'Foto fehlerhaft', errLeer:'Kein Beutel', errTresor:'Nicht im Tresor',
         errAbgeholt:'Schon übergeben', notFound:'Nicht gefunden', updated:'Neue Fassung geladen',
         beutel:'Beutel', material:'Belege', kamera:'Kamera', album:'Galerie', stkFoto:'Fotos', notiz:'Notiz',
+        tipGlare:'Schräg halten - Spiegelung vermeiden',
         tresor:'Tresor' },
   zh: { title:'go asia 做账记录', tabAbr:'做账', tabUeb:'交袋',
         cam:'扫描', camOff:'停止', photo:'拍照取码', reload:'刷新',
@@ -329,6 +337,7 @@ var TXT = {
         errFoto:'照片有误', errLeer:'没有钱袋', errTresor:'不在保险柜',
         errAbgeholt:'已有袋交出', notFound:'未找到', updated:'已更新到新版本',
         beutel:'钱袋', material:'材料', kamera:'拍照', album:'相册', stkFoto:'份', notiz:'备注',
+        tipGlare:'斜一点拿手机，避开反光',
         tresor:'保险柜' }
 };
 var lang = 'de';
@@ -914,7 +923,7 @@ function uebZeichnen() {
   $('uebSumme').textContent = wahl.length ? beutelSumme(wahl.length, summeVon(wahl)) : '';
   show($('uebKopf'), wahl.length > 0);
 
-  show($('uebArbeit'), !!stand && (liste.length > 0 || ueb.fotos.length > 0));
+  show($('uebArbeit'), !!stand);
   fotosZeichnen($('fotosUeb'), $('fotoZahlUeb'), ueb);
   notizZeigen($('notizUeb'), ueb);
   $('btnUebBuchen').disabled = arbeitet || !wahl.length || !ueb.fotos.length;
@@ -1131,6 +1140,11 @@ function onScan(text) {
 }
 
 var stream = null, detector = null, timer = 0, zx = null, zxCanvas = null;
+
+var scanSeit = 0, tippGezeigt = false, SCAN_TIPP_MS = 6000;
+
+var spur = null, zoomAn = false, zoomOptisch = null, lichtAn = false;
+
 function hints() {
   var h = new Map();
   h.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.ITF]);
@@ -1146,38 +1160,121 @@ function nativeDetector() {
     return new window.BarcodeDetector({ formats:['code_128', 'itf'].filter(function (x) { return f.indexOf(x) >= 0; }) });
   }).catch(function () { return null; });
 }
-function zxDecodeFrame(v) {
-  var w = v.videoWidth, h = v.videoHeight;
-  if (!w || !h) return null;
-  var scale = w > 1280 ? 1280 / w : 1;
-  var cw = Math.round(w * scale), ch = Math.round(h * scale);
+
+function zxLesen(v, a, dw, filter) {
+  var dh = Math.round(a.h * dw / a.w);
   if (!zxCanvas) zxCanvas = document.createElement('canvas');
-  if (zxCanvas.width !== cw || zxCanvas.height !== ch) { zxCanvas.width = cw; zxCanvas.height = ch; }
-  zxCanvas.getContext('2d', { willReadFrequently:true }).drawImage(v, 0, 0, cw, ch);
+  if (zxCanvas.width !== dw || zxCanvas.height !== dh) { zxCanvas.width = dw; zxCanvas.height = dh; }
+  var g = zxCanvas.getContext('2d', { willReadFrequently:true });
+  g.drawImage(v, a.x, a.y, a.w, a.h, 0, 0, dw, dh);
+  if (filter) filter(g, dw, dh);
   var src = new ZXing.HTMLCanvasElementLuminanceSource(zxCanvas);
   var bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src));
   try { return zx.decodeWithState(bmp); } catch (e) { return null; }
 }
+function ausschnitt(w, h, anteil) {
+  var aw = Math.round(w * anteil), ah = Math.round(h * anteil);
+  return { x:Math.round((w - aw) / 2), y:Math.round((h - ah) / 2), w:aw, h:ah };
+}
+
+function zxGanz(v) {
+  var a = ausschnitt(v.videoWidth, v.videoHeight, zoomAn && !zoomOptisch ? 0.5 : 1);
+  return zxLesen(v, a, Math.min(a.w, 1280), null);
+}
+
+function zxMitte(v, entspiegelt) {
+  var a = ausschnitt(v.videoWidth, v.videoHeight, zoomAn && !zoomOptisch ? 0.35 : 0.6);
+  return zxLesen(v, a, Math.min(a.w, 1600), entspiegelt ? entspiegeln : null);
+}
+
+var ENTSPIEGEL_K = 5;
+function entspiegeln(g, w, h) {
+  var bild = g.getImageData(0, 0, w, h), d = bild.data, n = w * h;
+  var grau = new Uint8Array(n), tmp = new Uint8Array(n), r = (ENTSPIEGEL_K - 1) >> 1;
+  var x, y, k, i, m, v, y0, y1;
+  for (i = 0; i < n; i++) grau[i] = (d[i * 4] * 77 + d[i * 4 + 1] * 151 + d[i * 4 + 2] * 28) >> 8;
+  for (y = 0; y < h; y++) {
+    y0 = Math.max(0, y - r); y1 = Math.min(h - 1, y + r);
+    for (x = 0; x < w; x++) {
+      m = 255;
+      for (k = y0; k <= y1; k++) { v = grau[k * w + x]; if (v < m) m = v; }
+      tmp[y * w + x] = m;
+    }
+  }
+  for (y = 0; y < h; y++) {
+    y0 = Math.max(0, y - r); y1 = Math.min(h - 1, y + r);
+    for (x = 0; x < w; x++) {
+      m = 0;
+      for (k = y0; k <= y1; k++) { v = tmp[k * w + x]; if (v > m) m = v; }
+      i = (y * w + x) * 4;
+      d[i] = d[i + 1] = d[i + 2] = m;
+    }
+  }
+  g.putImageData(bild, 0, 0);
+}
+
 function scanLoop(v) {
-  var useNative = !!detector, nativeMiss = 0;
+  var schritt = 0, zxN = 0;
+  scanSeit = Date.now(); tippGezeigt = false;
+  function treffer(text) { scanSeit = Date.now(); onScan(text); }
+  function zxVersuch() {
+    if (!zx) { zx = new ZXing.MultiFormatReader(); zx.setHints(hints()); }
+    zxN++;
+    var r = zxN % 2 ? zxMitte(v, zxN % 8 === 7) : zxGanz(v);
+    if (r) treffer(r.getText());
+    return !!r;
+  }
+  function tipp() {
+    if (!tippGezeigt && Date.now() - scanSeit > SCAN_TIPP_MS) { tippGezeigt = true; hinweis('tipGlare'); }
+  }
   (function tick() {
     if (!stream) return;
     if (v.readyState < 2 || !v.videoWidth) { timer = setTimeout(tick, 120); return; }
-    if (useNative) {
+    schritt++;
+    tipp();
+    if (detector) {
+
       detector.detect(v).then(function (c) {
-        if (c && c.length) { nativeMiss = 0; onScan(c[0].rawValue); }
-        else if (++nativeMiss > 60) useNative = false;
-      }).catch(function () { useNative = false; }).then(function () {
-        if (stream) timer = setTimeout(tick, 180);
+        if (c && c.length) treffer(c[0].rawValue);
+        else if (schritt % 2 === 0) zxVersuch();
+      }).catch(function () { detector = null; }).then(function () {
+        if (stream) timer = setTimeout(tick, 150);
       });
       return;
     }
-    if (!zx) { zx = new ZXing.MultiFormatReader(); zx.setHints(hints()); }
-    var r = zxDecodeFrame(v);
-    if (r) onScan(r.getText());
-    timer = setTimeout(tick, r ? 400 : 120);
+    var r = zxVersuch();
+    timer = setTimeout(tick, r ? 400 : 100);
   })();
 }
+
+function kameraKnoepfe() {
+  var caps = {};
+  try { caps = spur && spur.getCapabilities ? spur.getCapabilities() || {} : {}; } catch (e) {}
+  zoomOptisch = caps.zoom && caps.zoom.max > 1 ? caps.zoom : null;
+  zoomAn = false; lichtAn = false;
+  show($('btnZoom'), true);
+  show($('btnTorch'), caps.torch === true);
+  kameraZeigen();
+}
+function kameraZeigen() {
+  $('btnZoom').classList.toggle('an', zoomAn);
+  $('btnTorch').classList.toggle('an', lichtAn);
+  $('video').style.transform = zoomAn && !zoomOptisch ? 'scale(2)' : '';
+}
+function spurSetzen(was) {
+  if (!spur || !spur.applyConstraints) return Promise.resolve();
+  return spur.applyConstraints({ advanced:[was] }).catch(function () {});
+}
+$('btnZoom').onclick = function () {
+  zoomAn = !zoomAn;
+  if (zoomOptisch) spurSetzen({ zoom: zoomAn ? Math.min(2, zoomOptisch.max) : (zoomOptisch.min || 1) });
+  kameraZeigen();
+};
+$('btnTorch').onclick = function () {
+  lichtAn = !lichtAn;
+  spurSetzen({ torch: lichtAn });
+  kameraZeigen();
+};
 
 var kameraStartet = false;
 function startCam() {
@@ -1186,11 +1283,19 @@ function startCam() {
   kameraStartet = true;
   beep('ok');
   var v = $('video');
+
   navigator.mediaDevices.getUserMedia({
-    video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1920 }, height:{ ideal:1080 } }, audio:false
+    video:{ facingMode:{ ideal:'environment' }, width:{ ideal:3840 }, height:{ ideal:2160 } }, audio:false
   }).then(function (s) {
     kameraStartet = false;
+
+    if (mode === 'tresor') {
+      s.getTracks().forEach(function (x) { x.stop(); });
+      throw new Error('tresor');
+    }
     stream = s; v.srcObject = s;
+    spur = s.getVideoTracks ? s.getVideoTracks()[0] || null : null;
+    kameraKnoepfe();
     show($('cam'), true); $('btnCam').textContent = t('camOff');
     return v.play().catch(function () {});
   }).then(nativeDetector).then(function (d) {
@@ -1199,14 +1304,17 @@ function startCam() {
   }).catch(function (e) {
     kameraStartet = false;
     stopCam();
-    flashT('bad', 'noCam', (e && e.name) || '');
+    if (mode !== 'tresor') flashT('bad', 'noCam', (e && e.name) || '');
   });
 }
 function stopCam() {
   if (timer) { clearTimeout(timer); timer = 0; }
   detector = null;
   if (stream) { stream.getTracks().forEach(function (x) { x.stop(); }); stream = null; }
+  spur = null; zoomAn = false; lichtAn = false;
   $('video').srcObject = null;
+  $('video').style.transform = '';
+  show($('btnZoom'), false); show($('btnTorch'), false);
   show($('cam'), false); $('btnCam').textContent = t('cam');
 }
 $('btnCam').onclick = function () { stream ? stopCam() : startCam(); };
@@ -1359,7 +1467,7 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
 window.addEventListener('offline', function () { setNet(false); });
 
-var BUILD = 'c81f09efb27f';
+var BUILD = '0f7107d290d3';
 var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
 var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
 
