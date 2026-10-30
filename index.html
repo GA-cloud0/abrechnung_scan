@@ -71,6 +71,9 @@
   .camTools button.an { background:var(--hell); color:var(--kopf); }
 
   .two { display:flex; gap:8px; }
+  #manForm { display:flex; gap:8px; }
+  #manForm input { flex:1; min-width:0; }
+  #manForm button.b { flex:0 0 auto; width:auto; margin-top:8px; padding:0 18px; }
   button.b { flex:1; padding:14px 8px; font-size:16px; font-weight:700; border:0; border-radius:10px;
     background:var(--accent); color:#fff; }
   button.b.g { background:var(--panel); color:var(--text); border:1px solid var(--line); }
@@ -259,7 +262,8 @@
         <button id="btnShot" class="b g" data-t="photo">Foto-Code</button>
       </div>
       <input id="photo" type="file" accept="image/*" capture="environment" class="hide">
-      <form id="manForm" autocomplete="off"><input id="manual" type="text" inputmode="numeric"></form>
+
+      <form id="manForm" autocomplete="off"><input id="manual" type="text" inputmode="numeric"><button id="btnManual" class="b g" type="submit" data-t="eingabe">OK</button></form>
       <div id="manHint" class="hint"></div>
     </div>
 
@@ -314,7 +318,7 @@ var TXT = {
         errFoto:'Foto fehlerhaft', errLeer:'Kein Beutel', errTresor:'Nicht im Tresor',
         errAbgeholt:'Schon übergeben', notFound:'Nicht gefunden', updated:'Neue Fassung geladen',
         beutel:'Beutel', material:'Belege', kamera:'Kamera', album:'Galerie', stkFoto:'Fotos', notiz:'Notiz',
-        tipGlare:'Schräg halten - Spiegelung vermeiden',
+        tipGlare:'Schräg halten - Spiegelung vermeiden', eingabe:'OK',
         tresor:'Tresor' },
   zh: { title:'go asia 做账记录', tabAbr:'做账', tabUeb:'交袋',
         cam:'扫描', camOff:'停止', photo:'拍照取码', reload:'刷新',
@@ -337,7 +341,7 @@ var TXT = {
         errFoto:'照片有误', errLeer:'没有钱袋', errTresor:'不在保险柜',
         errAbgeholt:'已有袋交出', notFound:'未找到', updated:'已更新到新版本',
         beutel:'钱袋', material:'材料', kamera:'拍照', album:'相册', stkFoto:'份', notiz:'备注',
-        tipGlare:'斜一点拿手机，避开反光',
+        tipGlare:'斜一点拿手机，避开反光', eingabe:'确定',
         tresor:'保险柜' }
 };
 var lang = 'de';
@@ -1467,7 +1471,7 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
 window.addEventListener('offline', function () { setNet(false); });
 
-var BUILD = '0f7107d290d3';
+var BUILD = '96ed3763fc99';
 var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
 var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
 
