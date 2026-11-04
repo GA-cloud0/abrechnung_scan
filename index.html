@@ -640,7 +640,7 @@ var mode = 'abr';
 var arbeitet = false, sucht = false;
 
 function neueAbrechnung() { return { fotos:[], beutel:[], notiz:'', rid:'', leerRid:'', leerDatum:'' }; }
-function neueUebergabe() { return { fotos:[], haken:[], notiz:'', rid:'' }; }
+function neueUebergabe() { return { fotos:[], haken:[], beutel:[], notiz:'', rid:'' }; }
 var abr = neueAbrechnung(), ueb = neueUebergabe();
 var MAX_FOTOS = 15, fotoLaeuft = false;
 
@@ -690,13 +690,8 @@ function standSetzen(s) {
   stand = s; geladen = Date.now();
   if (s.filiale) { cfg.filiale = s.filiale; ls(K.cfg, cfg); }
 
-  ueb.haken = ueb.haken.filter(imTresor);
   kopfZeigen();
   zeichnen();
-}
-
-function imTresor(barcode) {
-  return !!stand && (stand.tresor || []).some(function (x) { return gleich(x.barcode, barcode); });
 }
 
 function filialName() {
@@ -899,7 +894,7 @@ function abrZurueckFragen(d) {
 function istAngehakt(barcode) { return ueb.haken.some(function (x) { return gleich(x, barcode); }); }
 
 function uebAuswahl() {
-  var liste = stand ? stand.tresor || [] : [];
+  var liste = (stand ? stand.tresor || [] : []).concat(ueb.beutel);
   return ueb.haken.map(function (c) {
     return liste.filter(function (b) { return gleich(b.barcode, c); })[0];
   }).filter(Boolean);
@@ -933,16 +928,24 @@ function uebZeichnen() {
   $('btnUebBuchen').disabled = arbeitet || !wahl.length || !ueb.fotos.length;
 }
 
+function uebHinzufuegen(b) {
+  var kurz = String(b.barcode).slice(-6);
+  if (istAngehakt(b.barcode)) { flashT('warn', 'schonGescannt', kurz); return; }
+  ueb.beutel = ueb.beutel.filter(function (x) { return !gleich(x.barcode, b.barcode); });
+  ueb.beutel.push(b);
+  ueb.haken.push(b.barcode);
+  ueb.rid = '';
+  uebZeichnen();
+  flash('ok', euro(b.betrag), datumText(b.datum) + '  ' + kurz);
+}
+
 function uebScan(code) {
   if (!stand) { laden(); return; }
   var kurz = code.slice(-6);
+  if (istAngehakt(code)) { flashT('warn', 'schonGescannt', kurz); return; }
   var b = (stand.tresor || []).filter(function (x) { return gleich(x.barcode, code); })[0];
   if (b) {
-    if (istAngehakt(b.barcode)) { flashT('warn', 'schonGescannt', kurz); return; }
-    ueb.haken.push(b.barcode);
-    ueb.rid = '';
-    uebZeichnen();
-    flash('ok', euro(b.betrag), datumText(b.datum) + '  ' + kurz);
+    uebHinzufuegen(b);
     return;
   }
   sucht = true;
@@ -952,14 +955,8 @@ function uebScan(code) {
     wartenAus();
     if (!d || !d.ok) { fehlerZeigen(d); return; }
     if (d.found && d.eigen && d.status === '已交出') { uebZurueckFragen(d); return; }
-    if (d.found && d.eigen && d.status === '保险柜') {
-
-      laden(true).then(function () {
-        if (imTresor(code)) uebScan(code); else flashT('bad', 'fremd', kurz);
-      });
-      return;
-    }
     if (d.found && d.eigen && d.status === '已清点') { flashT('warn', 'stGezaehlt', kurz); return; }
+    if (d.found && d.eigen) { uebHinzufuegen(d); return; }
     flashT('bad', 'fremd', kurz);
   }, function () { sucht = false; flashT('bad', 'offline'); });
 }
@@ -1471,7 +1468,7 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
 window.addEventListener('offline', function () { setNet(false); });
 
-var BUILD = '96ed3763fc99';
+var BUILD = 'c48f902a6d31';
 var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
 var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
 
