@@ -215,8 +215,9 @@
     <section id="mAbr">
       <div id="tagKarte" class="big">&ndash;</div>
       <div id="startBox" class="hide">
-        <div class="lbl" data-t="startdatum">Startdatum</div>
+        <div class="lbl" data-t="rechnungsdatum">Abrechnungsdatum</div>
         <input id="startDatum" type="date">
+        <button id="btnDatumStandard" type="button" class="b g w" style="margin-top:8px" data-t="datumStandard">Vorgeschlagenes Datum</button>
       </div>
       <div class="zuletzt"><span id="zuletztText"></span><button id="btnLeerZurueck" class="hide" type="button">&#8630;</button></div>
       <div id="platzAbr" class="platz"></div>
@@ -303,7 +304,7 @@ var TXT = {
         ready:'Bereit', reading:'Erkenne …', suche:'Suche …', laedt:'Lädt …', sendet:'Wird gebucht …', noRead:'Nichts erkannt', noCam:'Scannen nicht möglich',
         check:'Prüfziffer falsch', offline:'Kein Netz', needPair:'Anmelden',
         pairFail:'Kopplung fehlgeschlagen', nurFiliale:'Nur für Filialen', forbidden:'Keine Berechtigung',
-        startdatum:'Startdatum', fertig:'Erledigt', zuletzt:'Zuletzt', stk:'Beutel',
+        rechnungsdatum:'Abrechnungsdatum', datumStandard:'Vorgeschlagenes Datum', datumBelegt:'Für dieses Datum besteht bereits eine Abrechnung; zuerst zurücknehmen', startdatum:'Startdatum', fertig:'Erledigt', zuletzt:'Zuletzt', stk:'Beutel',
         fotoFehler:'Foto nicht lesbar', fotoMissing:'Bitte ein Foto hinzufügen', fotoSmall:'Foto leer oder zu klein; bitte neu aufnehmen', fotoLarge:'Foto zu groß; bitte verkleinern', fotoDecode:'Bilddaten beschädigt; bitte neu auswählen', fotoJpeg:'JPEG-Erstellung fehlgeschlagen; bitte neu aufnehmen', fotoNummer:'Foto', fotoLaedt:'Fotos werden vorbereitet …', maxFotos:'Höchstens 15 Fotos',
         leerTag:'Kein Geld', buchen:'Buchen', bestaetigen:'Bestätigen', zurueck:'Zurücknehmen',
         abrZurueck:'Abrechnung zurücknehmen', uebZurueck:'Übergabe zurücknehmen',
@@ -326,7 +327,7 @@ var TXT = {
         ready:'就绪', reading:'识别中…', suche:'查询中…', laedt:'加载中…', sendet:'正在提交…', noRead:'未识别', noCam:'无法扫描',
         check:'校验位错误', offline:'无网络', needPair:'请先配对',
         pairFail:'配对失败', nurFiliale:'仅限门店', forbidden:'无权限',
-        startdatum:'开始日期', fertig:'已完成', zuletzt:'上次', stk:'袋',
+        rechnungsdatum:'账单日期', datumStandard:'使用默认日期', datumBelegt:'该日期已有账单，请先撤回再重新提交', startdatum:'开始日期', fertig:'已完成', zuletzt:'上次', stk:'袋',
         fotoFehler:'照片无法读取', fotoMissing:'请添加照片', fotoSmall:'照片为空或过小，请重新拍摄', fotoLarge:'照片过大，请缩小后重试', fotoDecode:'照片数据损坏，请重新选择', fotoJpeg:'JPEG 转换失败，请重新拍摄', fotoNummer:'照片', fotoLaedt:'处理照片…', maxFotos:'最多 15 份',
         leerTag:'无钱袋', buchen:'提交', bestaetigen:'确认', zurueck:'撤回',
         abrZurueck:'撤回做账', uebZurueck:'撤回交袋',
@@ -639,7 +640,7 @@ var syncSek = 30, autoUhr = 0;
 var mode = 'abr';
 var arbeitet = false, sucht = false;
 
-function neueAbrechnung() { return { fotos:[], beutel:[], notiz:'', rid:'', leerRid:'', leerDatum:'' }; }
+function neueAbrechnung() { return { datum:'', fotos:[], beutel:[], notiz:'', rid:'', leerRid:'', leerDatum:'' }; }
 function neueUebergabe() { return { fotos:[], haken:[], beutel:[], notiz:'', rid:'' }; }
 var abr = neueAbrechnung(), ueb = neueUebergabe();
 var MAX_FOTOS = 15, fotoLaeuft = false;
@@ -659,6 +660,7 @@ function fehlerZeigen(d) {
     flashT('bad', fotoKeys[d.fotoGrund] || 'errFoto', d.fotoIndex ? t('fotoNummer') + ' ' + d.fotoIndex : '');
     return;
   }
+  if (d.code === 'datum' && d.datumGrund === 'exists') { flashT('bad', 'datumBelegt', datumText(d.datum)); return; }
   var zusatz = d.code === 'datum' ? datumText(d.next) :
                d.barcode ? String(d.barcode).slice(-6) :
                d.barcodes ? d.barcodes.map(function (b) { return String(b).slice(-6); }).join(' ') : '';
@@ -724,21 +726,29 @@ function fotosZeichnen(el, zahl, o) {
     '<button class="kachel neu" type="button" data-neu="album">' + SVG_ALBUM + '<span>' + esc(t('album')) + '</span></button>');
 }
 
-function abrFertig() { return !!stand && !!stand.start && !!stand.fertig; }
+function abrFertig() { return !!stand && !abr.datum && !!stand.start && !!stand.fertig; }
 
 function abrDatum() {
   if (!stand) return '';
-  return stand.start ? stand.next : ($('startDatum').value || stand.heute);
+  return abr.datum || (stand.start ? stand.next : stand.heute);
 }
 function startOk(datum) {
-  return !!datumTeile(datum) && datum <= stand.heute && datum >= tagePlus(stand.heute, -366);
+  return !!stand && !!datumTeile(datum) && datum <= stand.heute && datum >= (stand.start || tagePlus(stand.heute, -366));
 }
 
 function abrZeichnen() {
   var s = stand, karte = $('tagKarte');
   var ohneStart = !!s && !s.start, fertig = abrFertig();
   show(karte, !ohneStart);
-  show($('startBox'), ohneStart);
+  show($('startBox'), !!s);
+  var datumFeld = $('startDatum');
+  datumFeld.disabled = arbeitet;
+  $('btnDatumStandard').disabled = arbeitet || !abr.datum;
+  if (s) {
+    datumFeld.max = s.heute;
+    datumFeld.min = s.start || tagePlus(s.heute, -366);
+    datumFeld.value = abrDatum();
+  }
   if (!s) {
     karte.className = 'big';
     karte.textContent = '–';
@@ -748,12 +758,7 @@ function abrZeichnen() {
       esc(datumText(s.letzte ? s.letzte.datum : tagePlus(s.next, -1))) + '</span>';
   } else if (!ohneStart) {
     karte.className = 'big';
-    karte.innerHTML = esc(datumText(s.next)) + '<span class="wt">' + esc(wochentag(s.next)) + '</span>';
-  } else {
-    var d = $('startDatum');
-    d.max = s.heute;
-    d.min = tagePlus(s.heute, -366);
-    if (!d.value) d.value = s.heute;
+    karte.innerHTML = esc(datumText(abrDatum())) + '<span class="wt">' + esc(wochentag(abrDatum())) + '</span>';
   }
   var z = s && s.letzte, leer = !!z && z.typ === '无钱袋';
   $('zuletztText').textContent = !z ? '' : t('zuletzt') + ' ' + datumKurz(z.datum) + ABSTAND +
@@ -836,7 +841,7 @@ function datumGross(datum) {
 function abrBuchenFragen() {
   if (arbeitet || fotoLaeuft || !stand || abrFertig()) return;
   var datum = abrDatum(), werte = abrBetraege();
-  if (!stand.start && !startOk(datum)) { flashT('bad', 'errStart', datumText(datum)); return; }
+  if (!startOk(datum)) { flashT('bad', 'errStart', datumText(datum)); return; }
   if (!abr.fotos.length || !werte.length || werte.some(function (w) { return w === null; })) return;
   var summe = runde(werte.reduce(function (a, b) { return a + b; }, 0));
   frage({ gross:datumGross(datum),
@@ -849,7 +854,6 @@ function abrBuchenFragen() {
     schreiben('abrechnung', { rid:abr.rid, datum:datum, fotos:fotosZumSenden(abr), notiz:abr.notiz.trim(),
       beutel:abr.beutel.map(function (b, i) { return { barcode:b.barcode, betrag:werte[i] }; }) }, function () {
       if (abr === gesendet) abr = neueAbrechnung();
-      $('startDatum').value = '';
       zeichnen();
       flash('ok', t('abrDone') + ' ' + datumText(datum), beutelSumme(werte.length, summe));
     });
@@ -859,13 +863,12 @@ function abrBuchenFragen() {
 function leerFragen() {
   if (arbeitet || !stand || abrFertig() || abr.beutel.length) return;
   var datum = abrDatum();
-  if (!stand.start && !startOk(datum)) { flashT('bad', 'errStart', datumText(datum)); return; }
+  if (!startOk(datum)) { flashT('bad', 'errStart', datumText(datum)); return; }
   frage({ titel:t('leerTag'), gross:datumGross(datum), notiz:abr.notiz.trim(), knopf:t('bestaetigen') }, function () {
     if (!abr.leerRid || abr.leerDatum !== datum) { abr.leerRid = neueRid(); abr.leerDatum = datum; }
     schreiben('leertag', { rid:abr.leerRid, datum:datum, notiz:abr.notiz.trim() }, function () {
 
       abr = neueAbrechnung();
-      $('startDatum').value = '';
       zeichnen();
       flash('ok', t('leerDone'), datumText(datum));
     });
@@ -1027,6 +1030,8 @@ function schreiben(action, body, fertig) {
 
 function beschaeftigt(on) {
   arbeitet = on;
+  $('startDatum').disabled = on;
+  $('btnDatumStandard').disabled = on || !abr.datum;
 
   if (on) wartenAus();
   show($('busy'), on);
@@ -1417,7 +1422,14 @@ $('uebListe').onclick = function (ev) {
   lastText = '';
   uebZeichnen();
 };
-$('startDatum').onchange = function () { abr.rid = ''; abr.leerRid = ''; };
+$('startDatum').onchange = function () {
+  abr.datum = this.value; abr.rid = ''; abr.leerRid = ''; abr.leerDatum = '';
+  abrZeichnen();
+};
+$('btnDatumStandard').onclick = function () {
+  abr.datum = ''; abr.rid = ''; abr.leerRid = ''; abr.leerDatum = '';
+  abrZeichnen();
+};
 $('notizAbr').oninput = function () { abr.notiz = $('notizAbr').value; abr.rid = ''; abr.leerRid = ''; };
 $('notizUeb').oninput = function () { ueb.notiz = $('notizUeb').value; ueb.rid = ''; };
 $('btnBuchen').onclick = abrBuchenFragen;
@@ -1498,7 +1510,7 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('online', function () { setNet(true); autoPlanen(500); });
 window.addEventListener('offline', function () { setNet(false); });
 
-var BUILD = 'b63e8a49d027';
+var BUILD = 'd8f160b37a42';
 var VERSION_TAKT = 600000, VERSION_FRIST = 900000;
 var versionUhr = 0, versionZiel = '', neuUhr = 0, versionZuletzt = 0;
 
@@ -1521,7 +1533,7 @@ function ruhig() {
   return !arbeitet && !sucht && !laedt && !pairBusy && !stream && !dialogOffen && !fotoLaeuft &&
          ($('setup').classList.contains('hide') || !$('cfgCode').value) &&
          !abr.fotos.length && !abr.beutel.length && !ueb.fotos.length && !ueb.haken.length &&
-         !abr.notiz.trim() && !ueb.notiz.trim();
+         !abr.datum && !abr.notiz.trim() && !ueb.notiz.trim();
 }
 function neuLaden() {
   if (neuUhr) { clearTimeout(neuUhr); neuUhr = 0; }
